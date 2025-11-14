@@ -17,14 +17,20 @@ connectDB();
 const app = express();
 
 // Middleware
-// Server: app.js
+
+// 🚨 CORS FIX 🚨
+// We use the wildcard '*' to allow all origins. 
+// This is the simplest way to support local development and Vercel preview links
+// (like 'pharma-care-eqoh.vercel.app') during development/staging.
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://pharma-care-pcc8.vercel.app' // Corrected syntax and removed trailing slash
-  ],
-  credentials: true
+    origin: [
+        'http://localhost:5173',
+        'https://pharma-care-pcc8.vercel.app', // Your known main domain
+        '*' // Allows all Vercel preview domains and other origins
+    ],
+    credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,7 +40,7 @@ app.use('/api/inventory', inventoryRoutes);
 
 // Health check route
 app.get('/', (req, res) => {
-  res.json({ message: 'PharmaCare API is running' });
+    res.json({ message: 'PharmaCare API is running' });
 });
 
 // Error Handler (should be last)
@@ -43,5 +49,5 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
