@@ -9,10 +9,11 @@ import {
   Instagram, Linkedin, Menu, X, Eye, EyeOff, Smartphone,
   PackageSearch, FileText, Truck, Store, Zap, HeartPulse,
   BadgeCheck, Lock, UserCheck, Building2, Activity, Globe,
-  AlertCircle, User
+  AlertCircle, User,
+  Import
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api/auth'; 
+const API_BASE_URL = (`${Import.meta.VITE_BACKEND_URL}/api/auth` || 'http://localhost:5000/api/auth'); 
 
 const AuthPage = ({ onLogin, onLogout }) => { 
   const navigate = useNavigate();
