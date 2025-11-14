@@ -1,38 +1,43 @@
+require("dotenv").config();
 const express = require('express');
-const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const connectDB = require('./config/db');
+const authRoutes = require('./routers/authRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const { errorHandler } = require('./middleware/errorMiddleware');
 
-// Load environment variables from .env file
+
+// Load env vars
 dotenv.config();
 
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB connected successfully.');
-  } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
-    // Exit process with failure
-    process.exit(1);
-  }
-};
-
+// Connect to database
 connectDB();
 
 const app = express();
 
 // Middleware
-app.use(cors()); // Allow cross-origin requests from your React app
-app.use(express.json()); // Body parser
+app.use(cors({
+  origin: 'http://localhost:5173', // <-- CHANGE THIS from 3000 to 5173
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Define API Routes
-app.use('/api/auth', require('./routers/authRoutes'));
-// Add other routes here (e.g., app.use('/api/pharmacy', require('./routes/pharmacyRoutes'));)
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
-// Simple root route
-app.get('/', (req, res) => res.send('PharmaCare API is running.'));
+// Health check route
+app.get('/', (req, res) => {
+  res.json({ message: 'PharmaCare API is running' });
+});
+
+// Error Handler (should be last)
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

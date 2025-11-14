@@ -12,6 +12,7 @@ import PrescriptionsView from './pages/PrescriptionsView.jsx';
 import AnalyticsView from './pages/AnalyticsView.jsx';
 import FindMedicineView from './pages/FindMedicineView.jsx'; // Customer default
 import UploadPrescriptionView from './pages/UploadPrescriptionView.jsx';
+import ProfileView from './components/ProfileView.jsx';
 
 // --- Auth and Utility Imports ---
 import AuthPage from './pages/AuthPage.jsx'; 
@@ -31,6 +32,52 @@ const getInitialAuthView = (role) => {
     }
     return 'dashboard'; 
 }
+
+
+const renderView = () => {
+  // Profile view is common for all roles
+  if (activeView === 'profile') {
+    return <ProfileView userRole={userRole} />;
+  }
+
+  // Role-specific views
+  if (userRole === 'admin' || userRole === 'pharmacist') {
+    switch (activeView) {
+      case 'dashboard':
+        return <Dashboard medicines={mockMedicines} prescriptions={mockPrescriptions} sales={mockSales} />;
+      case 'inventory':
+        return <InventoryView medicines={mockMedicines} />;
+      case 'prescriptions':
+        return <PrescriptionsView prescriptions={mockPrescriptions} />;
+      case 'analytics':
+        return <AnalyticsView sales={mockSales} medicines={mockMedicines} />;
+      case 'find-medicine':
+        return <FindMedicineView pharmacies={mockNearbyPharmacies} />;
+      case 'upload-rx':
+        return <UploadPrescriptionView />;
+      default:
+        return <Dashboard medicines={mockMedicines} prescriptions={mockPrescriptions} sales={mockSales} />;
+    }
+  } else if (userRole === 'customer') {
+    switch (activeView) {
+      case 'find-medicine':
+        return <FindMedicineView pharmacies={mockNearbyPharmacies} />;
+      case 'upload-rx':
+        return <UploadPrescriptionView />;
+      case 'my-orders':
+        return (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center">
+            <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">No Orders Yet</h3>
+            <p className="text-gray-600">Upload a prescription to place your first order</p>
+          </div>
+        );
+      default:
+        return <FindMedicineView pharmacies={mockNearbyPharmacies} />;
+    }
+  }
+  return <Navigate to="/AuthPage" replace />;
+};
 
 // --- 1. Main Authenticated Application Layout Component (Protected) ---
 // Now receives handleLogout

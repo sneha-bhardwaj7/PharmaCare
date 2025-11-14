@@ -1,191 +1,244 @@
-const asyncHandler = require('express-async-handler');
-const User = require('../models/User');
-const generateToken = require('../config/generateToken');
-const otpGenerator = require('otp-generator');
-// const twilio = require('twilio'); // Uncomment if using Twilio
+const asyncHandler = require("express-async-handler");
+const User = require("../models/User");
+const generateToken = require("../config/generateToken");
+const twilio = require("twilio");
+const nodemailer = require("nodemailer");
 
-// --- Utility Functions (Placeholders) ---
+/* ---------------------------------------------------------
+   TWILIO CLIENT
+--------------------------------------------------------- */
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
-// Placeholder for sending SMS OTP (using console log)
-const sendSmsOtp = async (phone, otp) => {
-    // Implement Twilio or other SMS service logic here
-    console.log(`[SMS MOCK] Sending OTP ${otp} to ${phone}`);
-    // Example Twilio code (requires twilio package and environment variables)
-    /*
-    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    await client.messages.create({
-        body: `Your PharmaCare verification code is: ${otp}`,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: phone,
-    });
-    */
+/* ---------------------------------------------------------
+   EMAIL TRANSPORT (NO PASSWORD FROM USER)
+--------------------------------------------------------- */
+const emailTransporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,       // your gmail
+    pass: process.env.EMAIL_PASSWORD,   // your app password
+  },
+});
+
+/* ---------------------------------------------------------
+   SEND EMAIL OTP
+--------------------------------------------------------- */
+const sendEmailOtp = async (email, otp) => {
+  try {
+    const mailOptions = {
+      from: `"PharmaCare" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your PharmaCare Verification Code",
+      html: `
+        <div style="font-family: Arial; padding: 20px;">
+          <h2>Your Verification Code</h2>
+          <p>Your OTP is:</p>
+          <h1 style="color: #4A4AFF;">${otp}</h1>
+          <p>This code is valid for 10 minutes.</p>
+        </div>
+      `,
+    };
+
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`✔ OTP emailed to: ${email}`);
+    return true;
+
+  } catch (error) {
+    console.log("Email Error:", error.message);
+    return false;
+  }
 };
 
-// --- Email/Password Controllers ---
+/* ---------------------------------------------------------
+   SEND OTP (PHONE OR EMAIL)
+--------------------------------------------------------- */
+const sendOtp = asyncHandler(async (req, res) => {
+  const { phone, email } = req.body;
 
-// @desc    Register a new user (Email/Password)
-// @route   POST /api/auth/register
-// @access  Public
+  if (!phone && !email) {
+    res.status(400);
+    throw new Error("Phone or Email is required");
+  }
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+  let user;
+
+  /* ---------------------- PHONE OTP ---------------------- */
+  if (phone) {
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      res.status(400);
+      throw new Error("Invalid phone number");
+    }
+
+    await twilioClient.verify.v2
+      .services(process.env.TWILIO_SERVICE_SID)
+      .verifications.create({
+        to: `+91${cleanPhone}`,
+        channel: "sms",
+      });
+
+    user = await User.findOneAndUpdate(
+      { phone: cleanPhone },
+      { otp, otpExpires },
+      { new: true, upsert: true }
+    );
+  }
+
+  /* ---------------------- EMAIL OTP ---------------------- */
+  if (email) {
+    const cleanEmail = email.toLowerCase().trim();
+
+    await sendEmailOtp(cleanEmail, otp);
+
+    user = await User.findOneAndUpdate(
+      { email: cleanEmail },
+      { otp, otpExpires },
+      { new: true, upsert: true }
+    );
+  }
+
+  res.json({ message: "OTP sent successfully" });
+});
+
+/* ---------------------------------------------------------
+   VERIFY OTP (EMAIL OR PHONE)
+--------------------------------------------------------- */
+const verifyOtp = asyncHandler(async (req, res) => {
+  const { name, phone, email, otp, userType, pharmacyName } = req.body;
+
+  if (!otp || (!phone && !email)) {
+    res.status(400);
+    throw new Error("OTP and Phone/Email are required");
+  }
+
+  // Identify user
+  let query = {};
+  if (phone) query.phone = phone.replace(/\D/g, "");
+  if (email) query.email = email.toLowerCase().trim();
+
+  let user = await User.findOne(query);
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found. Please request OTP first.");
+  }
+
+  // OTP Validation
+  if (user.otp !== otp || user.otpExpires < new Date()) {
+    res.status(400);
+    throw new Error("Invalid or expired OTP");
+  }
+
+  // OTP Verified
+  user.isVerified = true;
+  user.otp = undefined;
+  user.otpExpires = undefined;
+
+  if (name && !user.name) user.name = name;
+  if (userType) user.userType = userType;
+
+  if (userType === "pharmacist") {
+    if (!pharmacyName) {
+      res.status(400);
+      throw new Error("Pharmacy name required");
+    }
+    user.pharmacyName = pharmacyName;
+  }
+
+  await user.save();
+
+  res.json({
+    message: "OTP verified successfully",
+    user,
+    token: generateToken(user._id, user.userType),
+  });
+});
+
+/* ---------------------------------------------------------
+   REGISTER (EMAIL + PASSWORD)
+--------------------------------------------------------- */
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, userType, pharmacyName } = req.body;
 
   if (!name || !email || !password || !userType) {
     res.status(400);
-    throw new Error('Please enter all required fields');
+    throw new Error("Please enter all required fields");
   }
 
-  // Check if user already exists
   const userExists = await User.findOne({ email });
 
   if (userExists) {
     res.status(400);
-    throw new Error('User already exists with this email');
+    throw new Error("User already exists with this email");
   }
 
-  const userData = { name, email, password, userType };
-  if (userType === 'pharmacist') {
-      userData.pharmacyName = pharmacyName;
+  const data = {
+    name,
+    email,
+    password,
+    userType,
+    isVerified: true,
+  };
+
+  if (userType === "pharmacist") {
+    if (!pharmacyName) {
+      res.status(400);
+      throw new Error("Pharmacy name required");
+    }
+    data.pharmacyName = pharmacyName;
   }
 
-  // Create user
-  const user = await User.create(userData);
+  const user = await User.create(data);
 
-  if (user) {
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      userType: user.userType,
-      token: generateToken(user._id, user.userType),
-    });
-  } else {
-    res.status(400);
-    throw new Error('Invalid user data');
-  }
+  res.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    userType: user.userType,
+    token: generateToken(user._id, user.userType),
+  });
 });
 
-// @desc    Authenticate user (Email/Password)
-// @route   POST /api/auth/login
-// @access  Public
+/* ---------------------------------------------------------
+   LOGIN (EMAIL + PASSWORD)
+--------------------------------------------------------- */
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  // Check for user email
+  if (!email || !password) {
+    res.status(400);
+    throw new Error("Email + Password required");
+  }
+
   const user = await User.findOne({ email });
 
-  if (user && (await user.matchPassword(password))) {
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      userType: user.userType,
-      token: generateToken(user._id, user.userType),
-    });
-  } else {
+  if (!user || !(await user.matchPassword(password))) {
     res.status(401);
-    throw new Error('Invalid email or password');
+    throw new Error("Invalid credentials");
   }
+
+  res.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    userType: user.userType,
+    token: generateToken(user._id, user.userType),
+  });
 });
 
-// --- Phone/OTP Controllers ---
-
-// @desc    Send OTP to phone number
-// @route   POST /api/auth/send-otp
-// @access  Public
-const sendOtp = asyncHandler(async (req, res) => {
-    const { phone } = req.body;
-
-    if (!phone) {
-        res.status(400);
-        throw new Error('Phone number is required');
-    }
-    
-    // Generate a 6-digit OTP
-    const otp = otpGenerator.generate(6, { digits: true, lowerCaseAlphabets: false, upperCaseAlphabets: false, specialChars: false });
-    
-    // Set OTP to expire in 10 minutes
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); 
-
-    // Find or create user to store OTP
-    let user = await User.findOne({ phone });
-
-    // For new user registration flow (as per your frontend setup, we allow phone to not exist for signup)
-    if (!user) {
-        // Just send the OTP for verification for now, actual user creation happens in /register-phone
-        // We will temporarily store OTP in the session or a temporary collection in a real app, 
-        // but for simplicity with one User model, we'll store it on a *new* or existing user entry.
-        // For a new signup, this is complex. The frontend must send ALL registration data on verify!
-        // For now, we only focus on sending the OTP.
-    }
-    
-    // Store OTP on user document if it exists, otherwise frontend handles the context
-    // For this simple mock, we'll assume the client is handling the signup flow.
-    // In a real flow, you'd save the OTP on the server and check it.
-    
-    // MOCK: Update any user that matches the phone with the new OTP (bad practice, but simple mock)
-    await User.updateOne(
-        { phone }, 
-        { otp: otp, otpExpires: otpExpires }, 
-        { upsert: true } // Creates new if not found (needs more data on client for a full user)
-    );
-    
-    // Call the mock SMS function
-    await sendSmsOtp(phone, otp);
-
-    res.json({ message: 'OTP sent successfully. You can now verify.' });
-});
-
-
-// @desc    Register and Login via Phone/OTP
-// @route   POST /api/auth/register-phone (Used for both login and final signup step)
-// @access  Public
-const registerPhone = asyncHandler(async (req, res) => {
-    const { name, phone, otp, userType, pharmacyName } = req.body;
-
-    if (!phone || !otp || !userType) {
-        res.status(400);
-        throw new Error('Phone, OTP, and User Type are required.');
-    }
-
-    // 1. Find user (or temporary entry) by phone and check OTP
-    let user = await User.findOne({ phone });
-
-    // OTP verification check
-    if (!user || user.otp !== otp || user.otpExpires < new Date()) {
-        res.status(401);
-        throw new Error('Invalid or expired OTP');
-    }
-
-    // 2. Clear OTP and mark as verified/logged in
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    user.isVerified = true;
-    
-    // 3. Update/Complete Registration if it's a new user flow
-    if (!user.name) { // Simple check to see if registration is complete
-        user.name = name;
-        user.userType = userType;
-        if (userType === 'pharmacist') {
-            user.pharmacyName = pharmacyName;
-        }
-    }
-    await user.save();
-
-
-    // 4. Respond with token
-    res.json({
-        _id: user._id,
-        name: user.name,
-        phone: user.phone,
-        userType: user.userType,
-        token: generateToken(user._id, user.userType),
-    });
-});
-
-
+/* ---------------------------------------------------------
+   EXPORTS
+--------------------------------------------------------- */
 module.exports = {
+  sendOtp,
+  verifyOtp,
   registerUser,
   loginUser,
-  sendOtp,
-  registerPhone,
 };

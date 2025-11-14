@@ -1,209 +1,350 @@
 // frontend/src/components/Navbar.jsx
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // <--- IMPORT NAVIGATE
+import { useNavigate } from 'react-router-dom';
 import { 
-  Pill, Package, FileText, ShoppingCart, BarChart3, Bell, 
-  Search, Upload, Home, Settings, Menu, X, User, LogOut,
-  ChevronDown, Check
+  LayoutDashboard, Package, FileText, TrendingUp, 
+  Search, Upload, ShoppingCart, LogOut, Menu, X,
+  Pill, User, Settings, Bell, ChevronDown, Sun, Moon,
+  HelpCircle, Mail, Check, Clock, Package2, AlertCircle
 } from 'lucide-react';
 
-const Navbar = ({ activeView, setActiveView, userRole, isMobileMenuOpen, setIsMobileMenuOpen, handleLogout }) => { // <--- RECEIVE handleLogout
-  const navigate = useNavigate(); // <--- INITIALIZE NAVIGATE
+const Navbar = ({ 
+  activeView, 
+  setActiveView, 
+  userRole, 
+  isMobileMenuOpen, 
+  setIsMobileMenuOpen,
+  handleLogout 
+}) => {
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  
   const [notifications] = useState([
-    { id: 1, text: 'New prescription uploaded', time: '5 min ago', read: false },
-    { id: 2, text: 'Order #12345 delivered', time: '1 hour ago', read: false },
-    { id: 3, text: 'Stock alert: Aspirin low', time: '2 hours ago', read: true },
+    { 
+      id: 1, 
+      type: 'prescription',
+      title: 'New Prescription', 
+      message: 'Prescription #12345 uploaded',
+      time: '5 min ago', 
+      read: false,
+      icon: FileText,
+      color: 'blue'
+    },
+    { 
+      id: 2, 
+      type: 'order',
+      title: 'Order Delivered', 
+      message: 'Order #98765 has been delivered',
+      time: '1 hour ago', 
+      read: false,
+      icon: Package2,
+      color: 'green'
+    },
+    { 
+      id: 3, 
+      type: 'alert',
+      title: 'Stock Alert', 
+      message: 'Aspirin running low - 5 units left',
+      time: '2 hours ago', 
+      read: true,
+      icon: AlertCircle,
+      color: 'orange'
+    },
   ]);
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- LOGOUT HANDLER ---
-  const handleUserLogout = () => {
-      // 1. Close menus
-      setShowProfileMenu(false);
-      setIsMobileMenuOpen(false);
-      // 2. Clear state in parent (App.jsx)
-      handleLogout();
-      // 3. Navigate to AuthPage
-      navigate('/AuthPage'); 
-  }
-  // ----------------------
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.profile-dropdown') && !event.target.closest('.profile-button')) {
+        setShowProfileMenu(false);
+      }
+      if (!event.target.closest('.notification-dropdown') && !event.target.closest('.notification-button')) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const adminMenuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'inventory', label: 'Inventory', icon: Package },
-    { id: 'prescriptions', label: 'Prescriptions', icon: FileText },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  ];
-  
-  const customerMenuItems = [
-    { id: 'find-medicine', label: 'Find Medicine', icon: Search },
-    { id: 'upload-rx', label: 'Upload Rx', icon: Upload },
-    { id: 'my-orders', label: 'My Orders', icon: ShoppingCart },
-  ];
+  const getNavigationItems = () => {
+    if (userRole === 'admin' || userRole === 'pharmacist') {
+      return [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'inventory', label: 'Inventory', icon: Package },
+        { id: 'prescriptions', label: 'Prescriptions', icon: FileText },
+        { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+        { id: 'find-medicine', label: 'Find Medicine', icon: Search },
+        { id: 'upload-rx', label: 'Upload Rx', icon: Upload }
+      ];
+    } else if (userRole === 'customer') {
+      return [
+        { id: 'find-medicine', label: 'Find Medicine', icon: Search },
+        { id: 'upload-rx', label: 'Upload Prescription', icon: Upload },
+        { id: 'my-orders', label: 'My Orders', icon: ShoppingCart }
+      ];
+    }
+    return [];
+  };
 
-  const menuItems = userRole === 'admin' ? adminMenuItems : customerMenuItems;
+  const navigationItems = getNavigationItems();
+
+  const getRoleDisplayName = () => {
+    if (userRole === 'admin') return 'Admin';
+    if (userRole === 'pharmacist') return 'Pharmacist';
+    if (userRole === 'customer') return 'Customer';
+    return 'User';
+  };
+
+  const getRoleIcon = () => {
+    if (userRole === 'admin') return '👨‍💼';
+    if (userRole === 'pharmacist') return '💊';
+    return '🛒';
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const handleProfileClick = () => {
+    navigate('/app/profile');
+    setShowProfileMenu(false);
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <nav className={`bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-lg sticky top-0 z-50 transition-all duration-300 ${
-      scrolled ? 'shadow-2xl backdrop-blur-sm bg-opacity-95' : ''
+    <nav className={`bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 text-white shadow-2xl sticky top-0 z-50 transition-all duration-300 ${
+      scrolled ? 'py-2 shadow-xl backdrop-blur-md bg-opacity-95' : 'py-0'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo Section */}
           <div className="flex items-center space-x-3 group cursor-pointer">
-            <div className="bg-white rounded-full p-2 shadow-lg transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-12">
-              <Pill className="h-6 w-6 text-blue-600" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-white rounded-2xl blur-md opacity-50 group-hover:opacity-75 transition-opacity"></div>
+              <div className="relative bg-white rounded-2xl p-2.5 shadow-xl transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                <Pill className="h-6 w-6 text-blue-600" />
+              </div>
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">PharmaCare</h1>
-              <p className="text-xs text-blue-100 font-medium">
-                {userRole === 'admin' ? '🔧 Admin Portal' : '💊 Customer Portal'}
+              <h1 className="text-xl font-bold tracking-tight flex items-center space-x-2">
+                <span>PharmaCare</span>
+                {/* <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">Pro</span> */}
+              </h1>
+              <p className="text-xs text-blue-100 font-medium flex items-center space-x-1">
+                {/* <span>{getRoleIcon()}</span> */}
+                <span>{getRoleDisplayName()} Portal</span>
               </p>
             </div>
           </div>
-          
-          {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-1 bg-blue-800 bg-opacity-30 rounded-xl p-1 backdrop-blur-sm">
-            {menuItems.map(item => (
+
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center space-x-1 bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20">
+            {navigationItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg transition-all duration-200 transform hover:scale-105 ${
-                  activeView === item.id 
-                    ? 'bg-white text-blue-600 shadow-lg scale-105' 
-                    : 'hover:bg-blue-500 hover:bg-opacity-50'
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-300 transform ${
+                  activeView === item.id
+                    ? 'bg-white text-blue-600 shadow-lg scale-105'
+                    : 'hover:bg-white/10 hover:scale-105'
                 }`}
               >
-                <item.icon className={`h-4 w-4 transition-transform duration-200 ${
+                <item.icon className={`h-4 w-4 transition-transform duration-300 ${
                   activeView === item.id ? 'scale-110' : ''
                 }`} />
                 <span className="text-sm font-semibold">{item.label}</span>
-                {activeView === item.id && (
-                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-1 h-1 bg-blue-600 rounded-full"></div>
-                )}
               </button>
             ))}
           </div>
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
+            {/* Dark Mode Toggle */}
+            <button 
+              onClick={() => setDarkMode(!darkMode)}
+              className="hidden md:flex hover:bg-white/10 p-2.5 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-95 backdrop-blur-sm"
+              title="Toggle Dark Mode"
+            >
+              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+
+            {/* Help Button */}
+            {/* <button 
+              className="hidden md:flex hover:bg-white/10 p-2.5 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-95 backdrop-blur-sm"
+              title="Help & Support"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button> */}
+
             {/* Notifications */}
-            <div className="relative">
+            <div className="relative notification-dropdown">
               <button 
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setShowProfileMenu(false);
                 }}
-                className="relative hover:bg-blue-500 hover:bg-opacity-50 p-2.5 rounded-xl transition-all duration-200 transform hover:scale-110 active:scale-95"
+                className="notification-button relative hover:bg-white/10 p-2.5 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-95 backdrop-blur-sm"
               >
-                <Bell className={`h-5 w-5 transition-transform duration-300 ${showNotifications ? 'rotate-12' : ''}`} />
+                <Bell className={`h-5 w-5 transition-transform duration-300 ${showNotifications ? 'animate-bounce' : ''}`} />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse shadow-lg">
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center animate-pulse shadow-lg px-1.5">
                     {unreadCount}
                   </span>
                 )}
               </button>
 
-              {/* Notifications Dropdown */}
+              {/* Enhanced Notifications Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-200 origin-top-right animate-in">
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3">
-                    <h3 className="text-white font-bold text-sm">Notifications</h3>
+                <div className="absolute right-0 mt-3 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 origin-top-right animate-in border border-gray-200">
+                  <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-white font-bold text-lg">Notifications</h3>
+                      <p className="text-blue-100 text-xs">{unreadCount} unread messages</p>
+                    </div>
+                    <button className="text-white hover:bg-white/20 px-3 py-1 rounded-lg text-xs font-semibold transition">
+                      Mark all read
+                    </button>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    {notifications.map(notif => (
-                      <div 
-                        key={notif.id}
-                        className={`px-4 py-3 border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer ${
-                          !notif.read ? 'bg-blue-50' : ''
-                        }`}
-                      >
-                        <div className="flex items-start space-x-3">
-                          {!notif.read && (
-                            <div className="w-2 h-2 bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
-                          )}
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-800 font-medium">{notif.text}</p>
-                            <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
+                    {notifications.map(notif => {
+                      const IconComponent = notif.icon;
+                      const colorClasses = {
+                        blue: 'bg-blue-100 text-blue-600',
+                        green: 'bg-green-100 text-green-600',
+                        orange: 'bg-orange-100 text-orange-600'
+                      };
+                      
+                      return (
+                        <div 
+                          key={notif.id}
+                          className={`px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-all cursor-pointer group ${
+                            !notif.read ? 'bg-blue-50/50' : ''
+                          }`}
+                        >
+                          <div className="flex items-start space-x-4">
+                            <div className={`${colorClasses[notif.color]} p-2.5 rounded-xl shadow-sm group-hover:scale-110 transition-transform`}>
+                              <IconComponent className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="text-sm font-bold text-gray-900">{notif.title}</p>
+                                  <p className="text-sm text-gray-600 mt-0.5">{notif.message}</p>
+                                </div>
+                                {!notif.read && (
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-1.5 flex-shrink-0 ml-2"></div>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-1 mt-2">
+                                <Clock className="h-3 w-3 text-gray-400" />
+                                <p className="text-xs text-gray-500">{notif.time}</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                  <div className="px-4 py-3 bg-gray-50 text-center">
-                    <button className="text-sm text-blue-600 font-semibold hover:text-blue-700">
-                      View all notifications
+                  <div className="px-6 py-4 bg-gray-50 text-center border-t border-gray-200">
+                    <button className="text-sm text-blue-600 font-semibold hover:text-blue-700 transition">
+                      View all notifications →
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Settings */}
-            <button className="hover:bg-blue-500 hover:bg-opacity-50 p-2.5 rounded-xl transition-all duration-200 transform hover:scale-110 hover:rotate-90 active:scale-95">
-              <Settings className="h-5 w-5" />
-            </button>
-
             {/* Profile Menu */}
-            <div className="relative hidden md:block">
+            <div className="relative hidden md:block profile-dropdown">
               <button 
                 onClick={() => {
                   setShowProfileMenu(!showProfileMenu);
                   setShowNotifications(false);
                 }}
-                className="flex items-center space-x-2 hover:bg-blue-500 hover:bg-opacity-50 px-3 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+                className="profile-button flex items-center space-x-2 hover:bg-white/10 px-3 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 backdrop-blur-sm border border-white/20"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center shadow-lg">
-                  <User className="h-4 w-4" />
+                <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white/30">
+                  <User className="h-5 w-5 text-white" />
                 </div>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
+                <div className="text-left hidden xl:block">
+                  {/* <p className="text-xs font-bold">John Doe</p> */}
+                  {/* <p className="text-xs text-blue-100">{getRoleDisplayName()}</p> */}
+                </div>
+                {/* <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${showProfileMenu ? 'rotate-180' : ''}`} /> */}
               </button>
 
-              {/* Profile Dropdown */}
+              {/* Enhanced Profile Dropdown */}
               {showProfileMenu && (
-                <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-200 origin-top-right">
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                        <User className="h-6 w-6 text-blue-600" />
+                <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 origin-top-right animate-in border border-gray-200">
+                  <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-6 py-5">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-white/30">
+                        <User className="h-8 w-8 text-white" />
                       </div>
                       <div>
-                        <p className="text-white font-bold text-sm">John Doe</p>
-                        <p className="text-blue-100 text-xs">{userRole === 'admin' ? 'Administrator' : 'Customer'}</p>
+                        <p className="text-white font-bold text-lg">John Doe</p>
+                        <p className="text-blue-100 text-sm font-medium">{getRoleDisplayName()}</p>
+                        <div className="flex items-center space-x-1 mt-1">
+                          <Check className="h-3 w-3 text-green-300" />
+                          <span className="text-xs text-green-300">Verified Account</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="py-2">
-                    <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 transition-colors flex items-center space-x-3">
-                      <User className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium">My Profile</span>
-                    </button>
-                    <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 transition-colors flex items-center space-x-3">
-                      <Settings className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium">Settings</span>
-                    </button>
-                    <hr className="my-2" />
-                    {/* --- DESKTOP LOGOUT BUTTON --- */}
+                  <div className="p-3">
                     <button 
-                      onClick={handleUserLogout} // <--- CALL LOGOUT HANDLER
-                      className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-3"
+                      onClick={handleProfileClick}
+                      className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 rounded-xl transition-all flex items-center space-x-3 group"
                     >
-                      <LogOut className="h-4 w-4" />
-                      <span className="text-sm font-medium">Logout</span>
+                      <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold">My Profile</span>
+                        <p className="text-xs text-gray-500">View and edit profile</p>
+                      </div>
                     </button>
-                    {/* --------------------------- */}
+                    <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-purple-50 rounded-xl transition-all flex items-center space-x-3 group mt-1">
+                      <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition">
+                        <Settings className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold">Settings</span>
+                        <p className="text-xs text-gray-500">Preferences & privacy</p>
+                      </div>
+                    </button>
+                    <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-green-50 rounded-xl transition-all flex items-center space-x-3 group mt-1">
+                      <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition">
+                        <Mail className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold">Messages</span>
+                        <p className="text-xs text-gray-500">Chat with support</p>
+                      </div>
+                    </button>
+                    <hr className="my-3" />
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center space-x-3 group"
+                    >
+                      <div className="bg-red-100 p-2 rounded-lg group-hover:bg-red-200 transition">
+                        <LogOut className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold">Logout</span>
+                        <p className="text-xs text-red-400">Sign out of account</p>
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}
@@ -211,28 +352,28 @@ const Navbar = ({ activeView, setActiveView, userRole, isMobileMenuOpen, setIsMo
 
             {/* Mobile Menu Toggle */}
             <button 
-              className="md:hidden hover:bg-blue-500 hover:bg-opacity-50 p-2.5 rounded-xl transition-all duration-200 transform hover:scale-110 active:scale-95" 
+              className="md:hidden hover:bg-white/10 p-2.5 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-95 backdrop-blur-sm border border-white/20" 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-2 animate-in">
-            {menuItems.map(item => (
+          <div className="md:hidden py-4 space-y-2 animate-in border-t border-white/20 mt-2">
+            {navigationItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
                   setActiveView(item.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
-                  activeView === item.id 
-                    ? 'bg-white text-blue-600 shadow-lg transform scale-105' 
-                    : 'hover:bg-blue-500 hover:bg-opacity-50'
+                className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-300 transform ${
+                  activeView === item.id
+                    ? 'bg-white text-blue-600 shadow-lg scale-105'
+                    : 'hover:bg-white/10'
                 }`}
               >
                 <item.icon className="h-5 w-5" />
@@ -242,25 +383,33 @@ const Navbar = ({ activeView, setActiveView, userRole, isMobileMenuOpen, setIsMo
             ))}
             
             {/* Mobile Profile Section */}
-            <div className="pt-4 mt-4 border-t border-blue-500 border-opacity-30">
-              <div className="flex items-center space-x-3 px-4 py-3 bg-blue-500 bg-opacity-30 rounded-xl">
-                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                  <User className="h-5 w-5 text-blue-600" />
+            <div className="pt-4 mt-4 border-t border-white/20 space-y-2">
+              <div className="flex items-center space-x-3 px-4 py-3 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <User className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="font-bold text-sm">John Doe</p>
-                  <p className="text-xs text-blue-100">{userRole === 'admin' ? 'Administrator' : 'Customer'}</p>
+                  <p className="text-xs text-blue-100">{getRoleDisplayName()}</p>
                 </div>
               </div>
-              {/* --- MOBILE LOGOUT BUTTON --- */}
               <button 
-                onClick={handleUserLogout} // <--- CALL LOGOUT HANDLER
-                className="w-full mt-2 px-4 py-3 text-left hover:bg-blue-500 hover:bg-opacity-50 rounded-xl transition-colors flex items-center space-x-3"
+                onClick={handleProfileClick}
+                className="w-full px-4 py-3 text-left hover:bg-white/10 rounded-xl transition-all flex items-center space-x-3"
+              >
+                <User className="h-5 w-5" />
+                <span className="font-medium">View Profile</span>
+              </button>
+              <button 
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 text-left bg-red-500 hover:bg-red-600 rounded-xl transition-all flex items-center space-x-3 shadow-lg"
               >
                 <LogOut className="h-5 w-5" />
                 <span className="font-medium">Logout</span>
               </button>
-              {/* ---------------------------- */}
             </div>
           </div>
         )}

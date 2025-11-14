@@ -1,14 +1,17 @@
-const express = require('express');
-const { registerUser, loginUser, sendOtp, registerPhone } = require('../controllers/authController');
-
+const express = require("express");
 const router = express.Router();
 
-// Email/Password Auth
-router.post('/register', registerUser);
-router.post('/login', loginUser);
+const {
+  sendOtp,
+  verifyOtp,
+  registerUser,
+  loginUser,
+} = require("../controllers/authController");
 
-// Phone/OTP Auth
-router.post('/send-otp', sendOtp);
-router.post('/register-phone', registerPhone); // Used for final step of phone signup/login
+// AUTH ROUTES
+router.post("/send-otp", sendOtp);
+router.post("/verify-otp", verifyOtp);
+router.post("/register", registerUser);
+router.post("/login", loginUser);
 
 module.exports = router;
