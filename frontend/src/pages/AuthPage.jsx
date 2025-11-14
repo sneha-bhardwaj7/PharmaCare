@@ -13,7 +13,7 @@ import {
   Import
 } from 'lucide-react';
 
-const API_BASE_URL = (`${Import.meta.VITE_BACKEND_URL}/api/auth` || 'http://localhost:5000/api/auth'); 
+const API_BASE_URL = (`${import.meta.env.VITE_BACKEND_URL}/api/auth` || 'http://localhost:5000/api/auth');
 
 const AuthPage = ({ onLogin, onLogout }) => { 
   const navigate = useNavigate();
