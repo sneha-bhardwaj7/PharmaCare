@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routers/authRoutes');
-const inventoryRoutes = require('./routes/inventoryRoutes');
+const inventoryRoutes = require('./routers/inventoryRoutes');
 const { errorHandler } = require('./middleware/errorMiddleware');
 
 
