@@ -17,8 +17,12 @@ connectDB();
 const app = express();
 
 // Middleware
+// Server: app.js
 app.use(cors({
-  origin: 'http://localhost:5173', // <-- CHANGE THIS from 3000 to 5173
+  origin: [
+    'http://localhost:5173',
+    'https://pharma-care-pcc8.vercel.app' // Corrected syntax and removed trailing slash
+  ],
   credentials: true
 }));
 app.use(express.json());
