@@ -5,6 +5,24 @@ const twilio = require("twilio");
 const nodemailer = require("nodemailer");
 
 /* ---------------------------------------------------------
+   GET USER PROFILE
+--------------------------------------------------------- */
+const getUserProfile = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.status(200).json({
+    _id: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    phone: req.user.phone,
+    pharmacyName: req.user.pharmacyName,
+    userType: req.user.userType
+  });
+});
+
+/* ---------------------------------------------------------
    TWILIO CLIENT
 --------------------------------------------------------- */
 const twilioClient = twilio(
@@ -13,63 +31,48 @@ const twilioClient = twilio(
 );
 
 /* ---------------------------------------------------------
-   EMAIL TRANSPORT (NO PASSWORD FROM USER)
+   EMAIL TRANSPORTER
 --------------------------------------------------------- */
 const emailTransporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,       // your gmail
-    pass: process.env.EMAIL_PASSWORD,   // your app password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
 /* ---------------------------------------------------------
-   SEND EMAIL OTP
+   SEND EMAIL OTP FUNCTION
 --------------------------------------------------------- */
 const sendEmailOtp = async (email, otp) => {
   try {
-    const mailOptions = {
+    await emailTransporter.sendMail({
       from: `"PharmaCare" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Your PharmaCare Verification Code",
-      html: `
-        <div style="font-family: Arial; padding: 20px;">
-          <h2>Your Verification Code</h2>
-          <p>Your OTP is:</p>
-          <h1 style="color: #4A4AFF;">${otp}</h1>
-          <p>This code is valid for 10 minutes.</p>
-        </div>
-      `,
-    };
-
-    await emailTransporter.sendMail(mailOptions);
-    console.log(`✔ OTP emailed to: ${email}`);
+      subject: "Verification OTP",
+      html: `<h2>Your OTP: <b>${otp}</b></h2>`,
+    });
     return true;
-
   } catch (error) {
-    console.log("Email Error:", error.message);
+    console.log("OTP Email Error:", error.message);
     return false;
   }
 };
 
 /* ---------------------------------------------------------
-   SEND OTP (PHONE OR EMAIL)
+   SEND OTP (EMAIL / PHONE)
 --------------------------------------------------------- */
 const sendOtp = asyncHandler(async (req, res) => {
   const { phone, email } = req.body;
 
   if (!phone && !email) {
     res.status(400);
-    throw new Error("Phone or Email is required");
+    throw new Error("Phone or Email required");
   }
-
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
   let user;
 
-  /* ---------------------- PHONE OTP ---------------------- */
+  // Phone OTP via Twilio
   if (phone) {
     const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length !== 10) {
@@ -77,6 +80,7 @@ const sendOtp = asyncHandler(async (req, res) => {
       throw new Error("Invalid phone number");
     }
 
+    // Send OTP via Twilio Verify Service
     await twilioClient.verify.v2
       .services(process.env.TWILIO_SERVICE_SID)
       .verifications.create({
@@ -84,20 +88,26 @@ const sendOtp = asyncHandler(async (req, res) => {
         channel: "sms",
       });
 
-    user = await User.findOneAndUpdate(
+    await User.findOneAndUpdate(
       { phone: cleanPhone },
-      { otp, otpExpires },
+      { phone: cleanPhone },
       { new: true, upsert: true }
     );
   }
-
-  /* ---------------------- EMAIL OTP ---------------------- */
+  // Email OTP Storage
   if (email) {
     const cleanEmail = email.toLowerCase().trim();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await sendEmailOtp(cleanEmail, otp);
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // Valid date object
 
-    user = await User.findOneAndUpdate(
+    const emailSent = await sendEmailOtp(cleanEmail, otp);
+    if (!emailSent) {
+      res.status(500);
+      throw new Error("Failed to send OTP email");
+    }
+
+    await User.findOneAndUpdate(
       { email: cleanEmail },
       { otp, otpExpires },
       { new: true, upsert: true }
@@ -106,77 +116,155 @@ const sendOtp = asyncHandler(async (req, res) => {
 
   res.json({ message: "OTP sent successfully" });
 });
-
 /* ---------------------------------------------------------
-   VERIFY OTP (EMAIL OR PHONE)
+   VERIFY OTP
 --------------------------------------------------------- */
 const verifyOtp = asyncHandler(async (req, res) => {
   const { name, phone, email, otp, userType, pharmacyName } = req.body;
 
   if (!otp || (!phone && !email)) {
     res.status(400);
-    throw new Error("OTP and Phone/Email are required");
+    throw new Error("OTP and Phone/Email required");
   }
 
-  // Identify user
+  let user;
   let query = {};
-  if (phone) query.phone = phone.replace(/\D/g, "");
-  if (email) query.email = email.toLowerCase().trim();
 
-  let user = await User.findOne(query);
+  /* PHONE OTP VERIFY */
+  if (phone) {
+    const cleanPhone = phone.replace(/\D/g, "");
 
-  if (!user) {
-    res.status(404);
-    throw new Error("User not found. Please request OTP first.");
-  }
+    try {
+      const verificationCheck = await twilioClient.verify.v2
+        .services(process.env.TWILIO_SERVICE_SID)
+        .verificationChecks.create({
+          to: `+91${cleanPhone}`,
+          code: otp,
+        });
 
-  // OTP Validation
-  if (user.otp !== otp || user.otpExpires < new Date()) {
-    res.status(400);
-    throw new Error("Invalid or expired OTP");
-  }
-
-  // OTP Verified
-  user.isVerified = true;
-  user.otp = undefined;
-  user.otpExpires = undefined;
-
-  if (name && !user.name) user.name = name;
-  if (userType) user.userType = userType;
-
-  if (userType === "pharmacist") {
-    if (!pharmacyName) {
+      if (verificationCheck.status !== "approved") {
+        res.status(400);
+        throw new Error("Invalid or expired OTP");
+      }
+    } catch {
       res.status(400);
-      throw new Error("Pharmacy name required");
+      throw new Error("Invalid or expired OTP");
     }
-    user.pharmacyName = pharmacyName;
+
+    query.phone = cleanPhone;
+    user = await User.findOne(query);
+
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+
+    user.isVerified = true;
+    if (name && !user.name) user.name = name;
+    if (userType) user.userType = userType;
+    if (userType === "pharmacist" && pharmacyName) {
+      user.pharmacyName = pharmacyName;
+    }
+
+    await user.save();
+
+    return res.json({
+      token: generateToken(user._id, user.userType),
+      user,
+    });
   }
 
-  await user.save();
+  /* EMAIL OTP VERIFY */
+  if (email) {
+    const cleanEmail = email.toLowerCase().trim();
+    query.email = cleanEmail;
 
-  res.json({
-    message: "OTP verified successfully",
-    user,
-    token: generateToken(user._id, user.userType),
-  });
+    user = await User.findOne(query);
+
+    if (!user) {
+      res.status(400);
+      throw new Error("Please request OTP first");
+    }
+
+    // Expiry Check (millisecond comparison)
+    if (Date.now() > new Date(user.otpExpires).getTime()) {
+      res.status(400);
+      throw new Error("OTP expired");
+    }
+
+    // OTP Match
+    if (user.otp.toString().trim() !== otp.toString().trim()) {
+      res.status(400);
+      throw new Error("Incorrect OTP");
+    }
+
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpires = null;
+
+    if (name && !user.name) user.name = name;
+    if (userType) user.userType = userType;
+    if (userType === "pharmacist" && pharmacyName) {
+      user.pharmacyName = pharmacyName;
+    }
+
+    await user.save();
+
+    // IMPORTANT — Return immediately
+    return res.json({
+      token: generateToken(user._id, user.userType),
+      user,
+    });
+  }
 });
 
 /* ---------------------------------------------------------
-   REGISTER (EMAIL + PASSWORD)
+   UPDATE USER PROFILE
+--------------------------------------------------------- */
+const updateUserProfile = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const { name, phone, address, pharmacyName, licenseNumber } = req.body;
+
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  if (name) user.name = name;
+  if (phone) user.phone = phone;
+  if (address) user.address = address;
+
+  if (user.userType === "pharmacist") {
+    if (pharmacyName) user.pharmacyName = pharmacyName;
+    if (licenseNumber) user.licenseNumber = licenseNumber;
+  }
+
+  const updatedUser = await user.save();
+
+  res.status(200).json(updatedUser);
+});
+
+/* ---------------------------------------------------------
+   REGISTER
 --------------------------------------------------------- */
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, userType, pharmacyName } = req.body;
 
   if (!name || !email || !password || !userType) {
     res.status(400);
-    throw new Error("Please enter all required fields");
+    throw new Error("Missing required fields");
   }
 
   const userExists = await User.findOne({ email });
 
   if (userExists) {
     res.status(400);
-    throw new Error("User already exists with this email");
+    throw new Error("User already exists");
   }
 
   const data = {
@@ -198,37 +286,26 @@ const registerUser = asyncHandler(async (req, res) => {
   const user = await User.create(data);
 
   res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    userType: user.userType,
+    ...user.toObject(),
     token: generateToken(user._id, user.userType),
   });
 });
 
 /* ---------------------------------------------------------
-   LOGIN (EMAIL + PASSWORD)
+   LOGIN
 --------------------------------------------------------- */
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    res.status(400);
-    throw new Error("Email + Password required");
-  }
-
   const user = await User.findOne({ email });
 
   if (!user || !(await user.matchPassword(password))) {
-    res.status(401);
+    res.status(400);
     throw new Error("Invalid credentials");
   }
 
   res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    userType: user.userType,
+    ...user.toObject(),
     token: generateToken(user._id, user.userType),
   });
 });
@@ -241,4 +318,6 @@ module.exports = {
   verifyOtp,
   registerUser,
   loginUser,
+  getUserProfile,
+  updateUserProfile,
 };

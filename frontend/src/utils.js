@@ -21,6 +21,11 @@ export const getStockStatus = (stock, reorderLevel) => {
   }
 };
 
+export const getAuthUser = () => {
+  const data = localStorage.getItem('user_auth');
+  return data ? JSON.parse(data) : null;
+};
+
 /**
  * Calculates the number of days until a given expiry date.
  * @param {string} expiryDateString - Expiry date in 'YYYY-MM-DD' format.

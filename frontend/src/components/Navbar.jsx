@@ -22,6 +22,8 @@ const Navbar = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [user, setUser] = useState(null);
+
   
   const [notifications] = useState([
     { 
@@ -85,8 +87,8 @@ const Navbar = ({
         { id: 'inventory', label: 'Inventory', icon: Package },
         { id: 'prescriptions', label: 'Prescriptions', icon: FileText },
         { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-        { id: 'find-medicine', label: 'Find Medicine', icon: Search },
-        { id: 'upload-rx', label: 'Upload Rx', icon: Upload }
+        // { id: 'find-medicine', label: 'Find Medicine', icon: Search },
+        // { id: 'upload-rx', label: 'Upload Rx', icon: Upload }
       ];
     } else if (userRole === 'customer') {
       return [
@@ -120,6 +122,31 @@ const Navbar = ({
     setShowProfileMenu(false);
     setIsMobileMenuOpen(false);
   };
+
+
+  useEffect(() => {
+  const fetchProfile = async () => {
+    const auth = JSON.parse(localStorage.getItem('user_auth'));
+    if (!auth?.token) return;
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${auth.token}`
+        }
+      });
+
+      const data = await res.json();
+      localStorage.setItem('user_profile', JSON.stringify(data));
+      setUser(data); // new state hook
+    } catch (err) {
+      console.log("Profile fetch failed:", err);
+    }
+  };
+
+  fetchProfile();
+}, []);
+
 
   return (
     <nav className={`bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 text-white shadow-2xl sticky top-0 z-50 transition-all duration-300 ${
@@ -264,91 +291,116 @@ const Navbar = ({
               )}
             </div>
 
-            {/* Profile Menu */}
-            <div className="relative hidden md:block profile-dropdown">
-              <button 
-                onClick={() => {
-                  setShowProfileMenu(!showProfileMenu);
-                  setShowNotifications(false);
-                }}
-                className="profile-button flex items-center space-x-2 hover:bg-white/10 px-3 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 backdrop-blur-sm border border-white/20"
-              >
-                <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white/30">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left hidden xl:block">
-                  {/* <p className="text-xs font-bold">John Doe</p> */}
-                  {/* <p className="text-xs text-blue-100">{getRoleDisplayName()}</p> */}
-                </div>
-                {/* <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${showProfileMenu ? 'rotate-180' : ''}`} /> */}
-              </button>
+            {/* Replace the profile dropdown section in Navbar.jsx (lines ~380-450) */}
 
-              {/* Enhanced Profile Dropdown */}
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 origin-top-right animate-in border border-gray-200">
-                  <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-6 py-5">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-white/30">
-                        <User className="h-8 w-8 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-white font-bold text-lg">John Doe</p>
-                        <p className="text-blue-100 text-sm font-medium">{getRoleDisplayName()}</p>
-                        <div className="flex items-center space-x-1 mt-1">
-                          <Check className="h-3 w-3 text-green-300" />
-                          <span className="text-xs text-green-300">Verified Account</span>
+              <div className="relative hidden md:block profile-dropdown">
+                <button 
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu);
+                    setShowNotifications(false);
+                  }}
+                  className="profile-button flex items-center space-x-2 hover:bg-white/10 px-3 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 active:scale-95 backdrop-blur-sm border border-white/20"
+                >
+                  <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white/30">
+                    <User className="h-5 w-5 text-white" />
+                  </div>
+                </button>
+
+                {/* Enhanced Profile Dropdown */}
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 origin-top-right animate-in border border-gray-200">
+                    <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 px-2 py-2">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-white/30">
+                          <User className="h-8 w-8 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-white font-bold text-lg">
+                            {(user?.name) || "User"}
+                          </p>
+                          <p className="text-blue-100 text-sm font-medium">
+                            {user?.email || getRoleDisplayName()}
+                          </p>
+                          {user?.userType === "pharmacist" && (
+                            <p className="text-xs text-purple-200">{user.pharmacyName}</p>
+                          )}
+                          <div className="flex items-center space-x-1 mt-1">
+                            <Check className="h-3 w-3 text-green-300" />
+                            <span className="text-xs text-green-300">Verified Account</span>
+                          </div>
                         </div>
                       </div>
                     </div>
+                    <div className="p-3">
+                      <button 
+                        onClick={() => {
+                          navigate('/app/profile');
+                          setShowProfileMenu(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 rounded-xl transition-all flex items-center space-x-3 group"
+                      >
+                        <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition">
+                          <User className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-sm font-semibold">My Profile</span>
+                          <p className="text-xs text-gray-500">View and edit profile</p>
+                        </div>
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          navigate('/app/settings');
+                          setShowProfileMenu(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full px-4 py-3 text-left text-gray-700 hover:bg-purple-50 rounded-xl transition-all flex items-center space-x-3 group mt-1"
+                      >
+                        <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition">
+                          <Settings className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-sm font-semibold">Settings</span>
+                          <p className="text-xs text-gray-500">Preferences & privacy</p>
+                        </div>
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          navigate('/app/messages');
+                          setShowProfileMenu(false);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full px-4 py-3 text-left text-gray-700 hover:bg-green-50 rounded-xl transition-all flex items-center space-x-3 group mt-1"
+                      >
+                        <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition">
+                          <Mail className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-sm font-semibold">Messages</span>
+                          <p className="text-xs text-gray-500">Chat with support</p>
+                        </div>
+                      </button>
+                      
+                      <hr className="my-1" />
+                      
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full px-4 py-1 text-left text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center space-x-3 group"
+                      >
+                        <div className="bg-red-100 p-2 rounded-lg group-hover:bg-red-200 transition">
+                          <LogOut className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-sm font-semibold">Logout</span>
+                          <p className="text-xs text-red-400">Sign out of account</p>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                  <div className="p-3">
-                    <button 
-                      onClick={handleProfileClick}
-                      className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 rounded-xl transition-all flex items-center space-x-3 group"
-                    >
-                      <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition">
-                        <User className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-sm font-semibold">My Profile</span>
-                        <p className="text-xs text-gray-500">View and edit profile</p>
-                      </div>
-                    </button>
-                    <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-purple-50 rounded-xl transition-all flex items-center space-x-3 group mt-1">
-                      <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition">
-                        <Settings className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-sm font-semibold">Settings</span>
-                        <p className="text-xs text-gray-500">Preferences & privacy</p>
-                      </div>
-                    </button>
-                    <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-green-50 rounded-xl transition-all flex items-center space-x-3 group mt-1">
-                      <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition">
-                        <Mail className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-sm font-semibold">Messages</span>
-                        <p className="text-xs text-gray-500">Chat with support</p>
-                      </div>
-                    </button>
-                    <hr className="my-3" />
-                    <button 
-                      onClick={handleLogout}
-                      className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center space-x-3 group"
-                    >
-                      <div className="bg-red-100 p-2 rounded-lg group-hover:bg-red-200 transition">
-                        <LogOut className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-sm font-semibold">Logout</span>
-                        <p className="text-xs text-red-400">Sign out of account</p>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
             {/* Mobile Menu Toggle */}
             <button 

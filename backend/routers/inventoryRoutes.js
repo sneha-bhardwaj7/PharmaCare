@@ -12,6 +12,12 @@ const { protect } = require('../middleware/authMiddleware'); // ASSUMED AUTH MID
 
 // Base route: /api/inventory
 
+
+const { getAlerts } = require('../controllers/inventoryController');
+
+router.get('/alerts', protect, getAlerts);
+
+
 router.route('/')
     .get(protect, getMedicines)   // GET all inventory items
     .post(protect, addMedicine);  // POST to add a new item

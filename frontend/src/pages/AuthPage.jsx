@@ -36,14 +36,16 @@ const AuthPage = ({ onLogin, onLogout }) => {
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  useEffect(() => {
-    const authData = localStorage.getItem('user_auth');
-    if (authData) {
-        setIsLoggedIn(true);
-    } else {
-        setIsLoggedIn(false);
-    }
-  }, []);
+      useEffect(() => {
+    const authData = localStorage.getItem('user_auth');
+    if (authData) {
+        const parsed = JSON.parse(authData);
+        const initialView = getInitialAuthView(parsed.userType);
+        navigate(`/app/${initialView}`);
+    }
+    }, []);
+
+    
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -128,63 +130,79 @@ const AuthPage = ({ onLogin, onLogout }) => {
   };
 
   // Verify OTP (Phone or Email)
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    
-    try {
-      if (!formData.otp) throw new Error("OTP is required.");
+ // Verify OTP (Phone or Email)
+const handleVerifyOtp = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  
+  try {
+    if (!formData.otp) throw new Error("OTP is required.");
 
-      const payload = {
-        otp: formData.otp,
-        userType: userType, 
-        name: formData.name, 
-      };
-      
-      // Add identifier
-      if (authMethod === 'phone') {
-        payload.phone = formData.phone;
-        if (!formData.phone) throw new Error("Phone number is required.");
-      } else if (authMethod === 'email') {
-        payload.email = formData.email;
-        if (!formData.email) throw new Error("Email is required.");
-      }
+    const payload = {
+      otp: formData.otp,
+      userType: userType, 
+      name: formData.name, 
+    };
+    
+    // Add identifier
+    if (authMethod === 'phone') {
+      payload.phone = formData.phone;
+      if (!formData.phone) throw new Error("Phone number is required.");
+    } else if (authMethod === 'email') {
+      payload.email = formData.email;
+      if (!formData.email) throw new Error("Email is required.");
+    }
 
-      // Add conditional fields
-      if (userType === 'pharmacist') {
-        if (!formData.pharmacyName) throw new Error("Pharmacy name is required for pharmacists.");
-        payload.pharmacyName = formData.pharmacyName;
-      }
+    // Add conditional fields
+    if (userType === 'pharmacist') {
+      if (!formData.pharmacyName) throw new Error("Pharmacy name is required for pharmacists.");
+      payload.pharmacyName = formData.pharmacyName;
+    }
 
-      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+    const response = await fetch(`${API_BASE_URL}/verify-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'OTP verification failed');
-      }
+    if (!response.ok) {
+      throw new Error(data.message || 'OTP verification failed');
+    }
 
-      // Store auth data and navigate
-      setAuthDataInStorage({ 
-        userType: data.user.userType, 
-        token: data.token, 
-        name: data.user.name,
-        userId: data.user._id 
-      });
-      
-    } catch (err) {
-      setError(err.message || 'OTP verification failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✅ FIX: Store auth data correctly in ONE place
+    const authData = {
+      token: data.token,
+      userType: data.user.userType,
+      userId: data.user._id,
+      name: data.user.name,
+      email: data.user.email || null,
+      phone: data.user.phone || null,
+      pharmacyName: data.user.pharmacyName || null
+    };
+
+    // Store in localStorage
+    localStorage.setItem('user_auth', JSON.stringify(authData));
+    
+    // Update UI state
+    setIsLoggedIn(true);
+    setShowAuthModal(false);
+    onLogin(data.user.userType);
+    
+    // Navigate to appropriate view
+    const initialView = getInitialAuthView(data.user.userType);
+    navigate(`/app/${initialView}`);
+    
+  } catch (err) {
+    setError(err.message || 'OTP verification failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Email/Password Authentication (Kept as requested)
   const handleEmailAuth = async (e) => {

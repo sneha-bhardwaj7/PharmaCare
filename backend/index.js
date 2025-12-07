@@ -43,6 +43,15 @@ app.get('/', (req, res) => {
     res.json({ message: 'PharmaCare API is running' });
 });
 
+// Prescription Routes
+app.use("/api/prescriptions", require("./routers/prescriptionRoutes"));
+app.use("/uploads", express.static("uploads"));
+
+
+const prescriptionRoutes = require("./routers/prescriptionRoutes");
+app.use("/api/prescriptions", prescriptionRoutes);
+
+
 // Error Handler (should be last)
 app.use(errorHandler);
 

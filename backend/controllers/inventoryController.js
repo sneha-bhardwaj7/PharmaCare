@@ -3,11 +3,61 @@
 const asyncHandler = require("express-async-handler");
 const Medicine = require("../models/Medicine");
 
+
 /* ---------------------------------------------------------
-   @desc    Get all medicines for the authenticated pharmacist
-   @route   GET /api/inventory
+   @desc    Get Low Stock & Expiry Alerts
+   @route   GET /api/inventory/alerts
    @access  Private (Pharmacist only)
 --------------------------------------------------------- */
+
+const getAlerts = asyncHandler(async (req, res) => {
+    const medicines = await Medicine.find({ user: req.user._id });
+
+    const today = new Date();
+    const next30Days = new Date();
+    next30Days.setDate(today.getDate() + 30);
+
+    const alerts = {
+        lowStock: [],
+        expiringSoon: [],
+        expired: []
+    };
+
+    medicines.forEach(m => {
+        // Low stock condition
+        if (m.stock <= m.reorderLevel) {
+            alerts.lowStock.push({
+                name: m.name,
+                stock: m.stock,
+                reorderLevel: m.reorderLevel,
+                batch: m.batch
+            });
+        }
+
+        // Expiry logic
+        const expiryDate = new Date(m.expiry);
+
+        if (expiryDate < today) {
+            alerts.expired.push({
+                name: m.name,
+                expiry: m.expiry,
+                batch: m.batch
+            });
+        } else if (expiryDate <= next30Days) {
+            alerts.expiringSoon.push({
+                name: m.name,
+                expiry: m.expiry,
+                daysLeft: Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24)),
+                batch: m.batch
+            });
+        }
+    });
+
+    res.status(200).json(alerts);
+});
+
+
+
 const getMedicines = asyncHandler(async (req, res) => {
     // 1. Fetch only the medicines belonging to the logged-in user (pharmacist)
     const medicines = await Medicine.find({ user: req.user._id });
@@ -15,11 +65,6 @@ const getMedicines = asyncHandler(async (req, res) => {
     res.status(200).json(medicines);
 });
 
-/* ---------------------------------------------------------
-   @desc    Add a new medicine item to inventory
-   @route   POST /api/inventory
-   @access  Private (Pharmacist only)
---------------------------------------------------------- */
 const addMedicine = asyncHandler(async (req, res) => {
     const { name, batch, category, stock, reorderLevel, price, expiry } = req.body;
 
@@ -120,4 +165,5 @@ module.exports = {
     addMedicine,
     updateMedicine,
     deleteMedicine,
+     getAlerts,
 };

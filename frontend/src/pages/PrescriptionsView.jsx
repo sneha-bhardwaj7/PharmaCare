@@ -1,11 +1,33 @@
 // frontend/src/pages/PrescriptionsView.jsx
-
 import React, { useState } from 'react';
 import { FileText, Pill, Calendar, X } from 'lucide-react';
 
 // Prescriptions View
 const PrescriptionsView = ({ prescriptions }) => {
   const [selectedRx, setSelectedRx] = useState(null);
+
+  const approveRx = async (id) => {
+  await fetch(`${API_URL}/prescriptions/approve/${id}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  refresh();
+};
+
+const rejectRx = async (id) => {
+  await fetch(`${API_URL}/prescriptions/reject/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ pharmacistNote: "Not valid" }),
+  });
+
+  refresh();
+};
+
 
   return (
     <div className="space-y-6">

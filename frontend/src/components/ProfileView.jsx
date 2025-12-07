@@ -1,27 +1,70 @@
-// frontend/src/components/ProfileView.jsx
+// ... existing code - importing from user_read_only_context ...
 
-import React, { useState } from 'react';
-import { 
-  User, Mail, Phone, MapPin, Calendar, Edit2, Save, X,
-  Camera, Shield, Award, TrendingUp, Package, FileText,
-  Clock, Star, CheckCircle, Lock, Bell, Globe, Smartphone
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X, Camera, Shield, Award, TrendingUp, Package, FileText, Clock, Star, CheckCircle, Lock, Bell, Globe, Smartphone } from 'lucide-react';
 
 const ProfileView = ({ userRole }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@pharmacare.com',
-    phone: '+91 98765 43210',
-    address: '123 Medical Street, Delhi, India',
-    dateOfBirth: '1990-05-15',
-    gender: 'Male',
-    licenseNumber: userRole === 'pharmacist' ? 'PH-12345-DL' : '',
-    pharmacyName: userRole === 'pharmacist' ? 'HealthPlus Pharmacy' : '',
-    memberSince: '2023-01-15'
-  });
+  const [profileData, setProfileData] = useState(null);
+  const [tempData, setTempData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [tempData, setTempData] = useState({ ...profileData });
+  // Load user data from localStorage on mount
+  useEffect(() => {
+    const loadUserData = () => {
+      try {
+        const userInfo = localStorage.getItem('userInfo');
+        console.log('📥 Loading profile data:', userInfo);
+        
+        if (userInfo) {
+          const parsedUser = JSON.parse(userInfo);
+          
+          // Set default values for fields that might not exist
+          const userData = {
+            name: parsedUser.name || 'User',
+            email: parsedUser.email || '',
+            phone: parsedUser.phone || '',
+            address: parsedUser.address || '',
+            dateOfBirth: parsedUser.dateOfBirth || '',
+            gender: parsedUser.gender || '',
+            licenseNumber: parsedUser.licenseNumber || '',
+            pharmacyName: parsedUser.pharmacyName || '',
+            userType: parsedUser.userType || userRole,
+            isVerified: parsedUser.isVerified || false,
+            memberSince: parsedUser.createdAt || parsedUser.memberSince || new Date().toISOString()
+          };
+          
+          console.log('✅ Profile data loaded:', userData);
+          setProfileData(userData);
+          setTempData(userData);
+        } else {
+          console.log('⚠️ No user info in localStorage');
+          // Set default empty profile
+          const emptyProfile = {
+            name: 'User',
+            email: '',
+            phone: '',
+            address: '',
+            dateOfBirth: '',
+            gender: '',
+            licenseNumber: '',
+            pharmacyName: '',
+            userType: userRole,
+            isVerified: false,
+            memberSince: new Date().toISOString()
+          };
+          setProfileData(emptyProfile);
+          setTempData(emptyProfile);
+        }
+      } catch (error) {
+        console.error('❌ Error loading profile data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [userRole]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -30,6 +73,20 @@ const ProfileView = ({ userRole }) => {
 
   const handleSave = () => {
     setProfileData({ ...tempData });
+    
+    // Update localStorage
+    try {
+      const userInfo = localStorage.getItem('userInfo');
+      if (userInfo) {
+        const currentUser = JSON.parse(userInfo);
+        const updatedUser = { ...currentUser, ...tempData };
+        localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        console.log('✅ Profile updated in localStorage');
+      }
+    } catch (error) {
+      console.error('❌ Error updating localStorage:', error);
+    }
+    
     setIsEditing(false);
   };
 
@@ -42,7 +99,17 @@ const ProfileView = ({ userRole }) => {
     setTempData({ ...tempData, [field]: value });
   };
 
-  const stats = userRole === 'customer' ? [
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!profileData || !profileData.name) return 'U';
+    const names = profileData.name.trim().split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return profileData.name.substring(0, 2).toUpperCase();
+  };
+
+  const stats = profileData?.userType === 'customer' || userRole === 'customer' ? [
     { label: 'Total Orders', value: '24', icon: Package, color: 'blue' },
     { label: 'Prescriptions', value: '8', icon: FileText, color: 'purple' },
     { label: 'Points Earned', value: '1,250', icon: Award, color: 'yellow' },
@@ -55,11 +122,20 @@ const ProfileView = ({ userRole }) => {
   ];
 
   const activityLog = [
-    { action: 'Uploaded prescription', date: '2024-11-08', time: '10:30 AM', status: 'completed' },
-    { action: 'Order placed #12345', date: '2024-11-07', time: '03:45 PM', status: 'completed' },
-    { action: 'Profile updated', date: '2024-11-05', time: '09:15 AM', status: 'completed' },
-    { action: 'Password changed', date: '2024-11-01', time: '02:20 PM', status: 'completed' }
+    { action: 'Account created', date: new Date().toISOString().split('T')[0], time: '10:30 AM', status: 'completed' },
+    { action: 'Profile verified', date: new Date().toISOString().split('T')[0], time: '10:35 AM', status: 'completed' },
   ];
+
+  if (loading || !profileData) {
+    return (
+      <div className="max-w-7xl mx-auto flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -73,15 +149,17 @@ const ProfileView = ({ userRole }) => {
             {/* Profile Picture */}
             <div className="relative group">
               <div className="w-32 h-32 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl ring-4 ring-white/30 transform group-hover:scale-105 transition-all duration-300">
-                <User className="h-16 w-16 text-white" />
+                <span className="text-white font-bold text-5xl">{getUserInitials()}</span>
               </div>
               <button className="absolute bottom-2 right-2 bg-white text-blue-600 p-2.5 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300">
                 <Camera className="h-4 w-4" />
               </button>
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-green-500 px-3 py-1 rounded-full text-white text-xs font-bold flex items-center space-x-1 shadow-lg">
-                <CheckCircle className="h-3 w-3" />
-                <span>Verified</span>
-              </div>
+              {profileData.isVerified && (
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-green-500 px-3 py-1 rounded-full text-white text-xs font-bold flex items-center space-x-1 shadow-lg">
+                  <CheckCircle className="h-3 w-3" />
+                  <span>Verified</span>
+                </div>
+              )}
             </div>
 
             {/* Profile Info */}
@@ -90,14 +168,27 @@ const ProfileView = ({ userRole }) => {
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-4">
                 <span className="bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full text-white text-sm font-semibold flex items-center space-x-2 border border-white/30">
                   <Shield className="h-4 w-4" />
-                  <span>{userRole === 'admin' ? 'Administrator' : userRole === 'pharmacist' ? 'Pharmacist' : 'Customer'}</span>
+                  <span>
+                    {profileData.userType === 'admin' ? 'Administrator' : 
+                     profileData.userType === 'pharmacist' ? 'Pharmacist' : 'Customer'}
+                  </span>
                 </span>
-                <span className="bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full text-white text-sm font-semibold flex items-center space-x-2 border border-white/30">
-                  <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
-                  <span>Premium Member</span>
-                </span>
+                {profileData.isVerified && (
+                  <span className="bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full text-white text-sm font-semibold flex items-center space-x-2 border border-white/30">
+                    <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
+                    <span>Verified Member</span>
+                  </span>
+                )}
+                {profileData.pharmacyName && (
+                  <span className="bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full text-white text-sm font-semibold flex items-center space-x-2 border border-white/30">
+                    <Package className="h-4 w-4" />
+                    <span>{profileData.pharmacyName}</span>
+                  </span>
+                )}
               </div>
-              <p className="text-blue-100 text-lg mb-6">Member since {new Date(profileData.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+              <p className="text-blue-100 text-lg mb-6">
+                Member since {new Date(profileData.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </p>
               
               {!isEditing && (
                 <button 
@@ -177,7 +268,9 @@ const ProfileView = ({ userRole }) => {
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition"
                 />
               ) : (
-                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">{profileData.name}</p>
+                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
+                  {profileData.name || 'Not provided'}
+                </p>
               )}
             </div>
 
@@ -194,7 +287,9 @@ const ProfileView = ({ userRole }) => {
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition"
                 />
               ) : (
-                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">{profileData.email}</p>
+                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
+                  {profileData.email || 'Not provided'}
+                </p>
               )}
             </div>
 
@@ -211,7 +306,9 @@ const ProfileView = ({ userRole }) => {
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition"
                 />
               ) : (
-                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">{profileData.phone}</p>
+                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
+                  {profileData.phone ? `+91 ${profileData.phone}` : 'Not provided'}
+                </p>
               )}
             </div>
 
@@ -229,7 +326,9 @@ const ProfileView = ({ userRole }) => {
                 />
               ) : (
                 <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
-                  {new Date(profileData.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {profileData.dateOfBirth ? 
+                    new Date(profileData.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 
+                    'Not provided'}
                 </p>
               )}
             </div>
@@ -245,13 +344,16 @@ const ProfileView = ({ userRole }) => {
                   value={tempData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition"
+                  placeholder="Enter your address"
                 />
               ) : (
-                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">{profileData.address}</p>
+                <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
+                  {profileData.address || 'Not provided'}
+                </p>
               )}
             </div>
 
-            {userRole === 'pharmacist' && (
+            {(profileData.userType === 'pharmacist' || userRole === 'pharmacist') && (
               <>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
@@ -264,9 +366,12 @@ const ProfileView = ({ userRole }) => {
                       value={tempData.licenseNumber}
                       onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition"
+                      placeholder="Enter license number"
                     />
                   ) : (
-                    <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">{profileData.licenseNumber}</p>
+                    <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
+                      {profileData.licenseNumber || 'Not provided'}
+                    </p>
                   )}
                 </div>
 
@@ -281,9 +386,12 @@ const ProfileView = ({ userRole }) => {
                       value={tempData.pharmacyName}
                       onChange={(e) => handleInputChange('pharmacyName', e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition"
+                      placeholder="Enter pharmacy name"
                     />
                   ) : (
-                    <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">{profileData.pharmacyName}</p>
+                    <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
+                      {profileData.pharmacyName || 'Not provided'}
+                    </p>
                   )}
                 </div>
               </>
@@ -322,7 +430,7 @@ const ProfileView = ({ userRole }) => {
               <span>Recent Activity</span>
             </h3>
             <div className="space-y-3">
-              {activityLog.slice(0, 3).map((activity, idx) => (
+              {activityLog.map((activity, idx) => (
                 <div key={idx} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
                   <div className="bg-green-100 p-2 rounded-lg">
                     <CheckCircle className="h-4 w-4 text-green-600" />

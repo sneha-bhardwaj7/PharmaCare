@@ -284,10 +284,28 @@ const InventoryView = () => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${stockStatus.color} text-white`}>
-                        {stockStatus.label}
-                      </span>
-                    </td>
+
+                        {/* Stock Status */}
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${stockStatus.color} text-white`}>
+                          {stockStatus.label}
+                        </span>
+
+                        {/* 🔥 Low Stock Badge */}
+                        {stockStatus.label === "Low Stock" && (
+                          <div className="text-xs text-red-600 font-bold mt-1">
+                            Low Stock
+                          </div>
+                        )}
+
+                        {/* 🔥 Expiring Soon Badge */}
+                        {isExpiringSoon && (
+                          <div className="text-xs text-orange-600 font-bold mt-1">
+                            Expiring Soon
+                          </div>
+                        )}
+
+                      </td>
+
                     <td className="px-6 py-4 flex space-x-2">
                       <button
                         onClick={() => openEditModal(medicine)}
