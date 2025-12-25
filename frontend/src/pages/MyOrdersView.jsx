@@ -1,6 +1,6 @@
 // frontend/src/pages/MyOrdersView.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShoppingCart, Package, Truck, CheckCircle, Clock, 
   MapPin, Phone, Mail, Eye, Download, Star 
@@ -8,48 +8,31 @@ import {
 
 const MyOrdersView = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock orders data
-  const orders = [
-    {
-      id: 'ORD-2025-001',
-      date: '2025-10-28',
-      status: 'delivered',
-      items: [
-        { name: 'Paracetamol 500mg', quantity: 2, price: 15 },
-        { name: 'Vitamin D3', quantity: 1, price: 450 }
-      ],
-      total: 480,
-      pharmacy: 'MedPlus Pharmacy',
-      address: '123 Main Street, Delhi',
-      deliveryDate: '2025-10-30'
-    },
-    {
-      id: 'ORD-2025-002',
-      date: '2025-10-31',
-      status: 'processing',
-      items: [
-        { name: 'Amoxicillin 500mg', quantity: 1, price: 120 },
-        { name: 'Cough Syrup', quantity: 1, price: 85 }
-      ],
-      total: 205,
-      pharmacy: 'Apollo Pharmacy',
-      address: '123 Main Street, Delhi',
-      estimatedDelivery: '2025-11-02'
-    },
-    {
-      id: 'ORD-2025-003',
-      date: '2025-11-01',
-      status: 'pending',
-      items: [
-        { name: 'Insulin Injection', quantity: 3, price: 850 }
-      ],
-      total: 2550,
-      pharmacy: 'HealthCare Pharmacy',
-      address: '123 Main Street, Delhi',
-      estimatedDelivery: '2025-11-03'
-    }
-  ];
+  // 🔥 Fetch orders from backend instead of mock data
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const authData = JSON.parse(localStorage.getItem('user_auth'));
+        const token = authData ? `Bearer ${authData.token}` : '';
+
+        const res = await fetch('http://localhost:5000/api/orders', {
+          headers: { Authorization: token }
+        });
+
+        const data = await res.json();
+        setOrders(data);
+      } catch (err) {
+        console.error('Failed to fetch orders:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   const getStatusIcon = (status) => {
     switch(status) {
@@ -77,9 +60,16 @@ const MyOrdersView = () => {
     }
   };
 
-  const filteredOrders = activeTab === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === activeTab);
+  // Filter orders based on tab
+  const filteredOrders = activeTab === 'all' ? orders : orders.filter(order => order.status === activeTab);
+
+  if (loading) {
+    return (
+      <div className="text-center p-10 text-gray-500 text-lg">
+        Loading your orders...
+      </div>
+    );
+  }
 
   if (orders.length === 0) {
     return (
@@ -139,7 +129,7 @@ const MyOrdersView = () => {
       <div className="space-y-4">
         {filteredOrders.map(order => (
           <div 
-            key={order.id}
+            key={order._id}
             className="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden"
           >
             {/* Order Header */}
@@ -150,13 +140,9 @@ const MyOrdersView = () => {
                     <Package className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{order.id}</h3>
+                    <h3 className="font-bold text-gray-900 text-lg">{order._id}</h3>
                     <p className="text-sm text-gray-600">
-                      Ordered on {new Date(order.date).toLocaleDateString('en-IN', { 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric' 
-                      })}
+                      Ordered on {new Date(order.createdAt).toLocaleDateString('en-IN')}
                     </p>
                   </div>
                 </div>
@@ -216,35 +202,6 @@ const MyOrdersView = () => {
                         <div className="font-medium text-gray-900">{order.pharmacy}</div>
                       </div>
                     </div>
-                    {order.status === 'delivered' ? (
-                      <div className="flex items-start space-x-3">
-                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="text-sm text-gray-600">Delivered On</div>
-                          <div className="font-medium text-green-700">
-                            {new Date(order.deliveryDate).toLocaleDateString('en-IN', { 
-                              day: 'numeric', 
-                              month: 'long', 
-                              year: 'numeric' 
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start space-x-3">
-                        <Clock className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="text-sm text-gray-600">Estimated Delivery</div>
-                          <div className="font-medium text-orange-700">
-                            {new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { 
-                              day: 'numeric', 
-                              month: 'long', 
-                              year: 'numeric' 
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

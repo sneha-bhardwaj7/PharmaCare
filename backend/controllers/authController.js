@@ -17,10 +17,16 @@ const getUserProfile = asyncHandler(async (req, res) => {
     name: req.user.name,
     email: req.user.email,
     phone: req.user.phone,
+    address: req.user.address,
+    pincode: req.user.pincode,
     pharmacyName: req.user.pharmacyName,
-    userType: req.user.userType
+    licenseNumber: req.user.licenseNumber,
+    userType: req.user.userType,
+    isVerified: req.user.isVerified,
+    createdAt: req.user.createdAt
   });
 });
+
 
 /* ---------------------------------------------------------
    TWILIO CLIENT
@@ -49,8 +55,18 @@ const sendEmailOtp = async (email, otp) => {
     await emailTransporter.sendMail({
       from: `"PharmaCare" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Verification OTP",
-      html: `<h2>Your OTP: <b>${otp}</b></h2>`,
+      subject: "Password Reset OTP",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Password Reset Request</h2>
+          <p>You requested to reset your password. Use the OTP below:</p>
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #2563eb; margin: 0; font-size: 36px; letter-spacing: 8px;">${otp}</h1>
+          </div>
+          <p>This OTP will expire in 10 minutes.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
     });
     return true;
   } catch (error) {
@@ -60,264 +76,291 @@ const sendEmailOtp = async (email, otp) => {
 };
 
 /* ---------------------------------------------------------
-   SEND OTP (EMAIL / PHONE)
+   SEND OTP - Only for Password Reset (Forgot Password)
 --------------------------------------------------------- */
 const sendOtp = asyncHandler(async (req, res) => {
-  const { phone, email } = req.body;
+  const { email } = req.body;
 
-  if (!phone && !email) {
+  if (!email) {
     res.status(400);
-    throw new Error("Phone or Email required");
+    throw new Error("Email is required");
   }
 
-  let user;
-
-  // Phone OTP via Twilio
-  if (phone) {
-    const cleanPhone = phone.replace(/\D/g, "");
-    if (cleanPhone.length !== 10) {
-      res.status(400);
-      throw new Error("Invalid phone number");
-    }
-
-    // Send OTP via Twilio Verify Service
-    await twilioClient.verify.v2
-      .services(process.env.TWILIO_SERVICE_SID)
-      .verifications.create({
-        to: `+91${cleanPhone}`,
-        channel: "sms",
-      });
-
-    await User.findOneAndUpdate(
-      { phone: cleanPhone },
-      { phone: cleanPhone },
-      { new: true, upsert: true }
-    );
-  }
-  // Email OTP Storage
-  if (email) {
-    const cleanEmail = email.toLowerCase().trim();
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // Valid date object
-
-    const emailSent = await sendEmailOtp(cleanEmail, otp);
-    if (!emailSent) {
-      res.status(500);
-      throw new Error("Failed to send OTP email");
-    }
-
-    await User.findOneAndUpdate(
-      { email: cleanEmail },
-      { otp, otpExpires },
-      { new: true, upsert: true }
-    );
+  const cleanEmail = email.toLowerCase().trim();
+  
+  // Check if user exists
+  const user = await User.findOne({ email: cleanEmail });
+  
+  if (!user) {
+    res.status(404);
+    throw new Error("No account found with this email");
   }
 
-  res.json({ message: "OTP sent successfully" });
-});
-/* ---------------------------------------------------------
-   VERIFY OTP
---------------------------------------------------------- */
-const verifyOtp = asyncHandler(async (req, res) => {
-  const { name, phone, email, otp, userType, pharmacyName } = req.body;
+  // Generate OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  if (!otp || (!phone && !email)) {
-    res.status(400);
-    throw new Error("OTP and Phone/Email required");
+  // Send OTP via email
+  const emailSent = await sendEmailOtp(cleanEmail, otp);
+  if (!emailSent) {
+    res.status(500);
+    throw new Error("Failed to send OTP email");
   }
 
-  let user;
-  let query = {};
+  // Store OTP in database
+  user.otp = otp;
+  user.otpExpires = otpExpires;
+  await user.save();
 
-  /* PHONE OTP VERIFY */
-  if (phone) {
-    const cleanPhone = phone.replace(/\D/g, "");
-
-    try {
-      const verificationCheck = await twilioClient.verify.v2
-        .services(process.env.TWILIO_SERVICE_SID)
-        .verificationChecks.create({
-          to: `+91${cleanPhone}`,
-          code: otp,
-        });
-
-      if (verificationCheck.status !== "approved") {
-        res.status(400);
-        throw new Error("Invalid or expired OTP");
-      }
-    } catch {
-      res.status(400);
-      throw new Error("Invalid or expired OTP");
-    }
-
-    query.phone = cleanPhone;
-    user = await User.findOne(query);
-
-    if (!user) {
-      res.status(404);
-      throw new Error("User not found");
-    }
-
-    user.isVerified = true;
-    if (name && !user.name) user.name = name;
-    if (userType) user.userType = userType;
-    if (userType === "pharmacist" && pharmacyName) {
-      user.pharmacyName = pharmacyName;
-    }
-
-    await user.save();
-
-    return res.json({
-      token: generateToken(user._id, user.userType),
-      user,
-    });
-  }
-
-  /* EMAIL OTP VERIFY */
-  if (email) {
-    const cleanEmail = email.toLowerCase().trim();
-    query.email = cleanEmail;
-
-    user = await User.findOne(query);
-
-    if (!user) {
-      res.status(400);
-      throw new Error("Please request OTP first");
-    }
-
-    // Expiry Check (millisecond comparison)
-    if (Date.now() > new Date(user.otpExpires).getTime()) {
-      res.status(400);
-      throw new Error("OTP expired");
-    }
-
-    // OTP Match
-    if (user.otp.toString().trim() !== otp.toString().trim()) {
-      res.status(400);
-      throw new Error("Incorrect OTP");
-    }
-
-    user.isVerified = true;
-    user.otp = null;
-    user.otpExpires = null;
-
-    if (name && !user.name) user.name = name;
-    if (userType) user.userType = userType;
-    if (userType === "pharmacist" && pharmacyName) {
-      user.pharmacyName = pharmacyName;
-    }
-
-    await user.save();
-
-    // IMPORTANT — Return immediately
-    return res.json({
-      token: generateToken(user._id, user.userType),
-      user,
-    });
-  }
+  res.json({ 
+    message: "OTP sent successfully to your email",
+    email: cleanEmail 
+  });
 });
 
 /* ---------------------------------------------------------
-   UPDATE USER PROFILE
+   REGISTER USER - Email + Password (No OTP Required)
 --------------------------------------------------------- */
-const updateUserProfile = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    return res.status(404).json({ message: "User not found" });
+const registerUser = asyncHandler(async (req, res) => {
+  const { name, email, password, userType, pharmacyName, address, pincode } = req.body;
+
+  // Validation
+  if (!name || !email || !password || !userType || !address || !pincode) {
+    res.status(400);
+    throw new Error("Please provide name, email, password, and user type");
   }
 
-  const { name, phone, address, pharmacyName, licenseNumber } = req.body;
+  if (password.length < 6) {
+    res.status(400);
+    throw new Error("Password must be at least 6 characters long");
+  }
 
-  const user = await User.findById(req.user._id);
+  const cleanEmail = email.toLowerCase().trim();
+
+  // Check if user already exists
+  const userExists = await User.findOne({ email: cleanEmail });
+  if (userExists) {
+    res.status(400);
+    throw new Error("User already exists with this email");
+  }
+
+  // Create user data
+    const userData = {
+    name,
+    email: cleanEmail,
+    password,
+    userType,
+    isVerified: true,
+    address,
+    pincode,
+  };
+
+  // Add pharmacy name for pharmacists
+  if (userType === "pharmacist") {
+    if (!pharmacyName) {
+      res.status(400);
+      throw new Error("Pharmacy name is required for pharmacists");
+    }
+    userData.pharmacyName = pharmacyName;
+  }
+
+  // Create user
+  const user = await User.create(userData);
+
+  // Return user data with token
+   res.status(201).json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    address: user.address,
+    pincode: user.pincode,
+    userType: user.userType,
+    pharmacyName: user.pharmacyName,
+    token: generateToken(user._id, user.userType),
+    message: "Account created successfully"
+  });
+});
+
+/* ---------------------------------------------------------
+   LOGIN USER - Email + Password
+--------------------------------------------------------- */
+const loginUser = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    res.status(400);
+    throw new Error("Please provide email and password");
+  }
+
+  const cleanEmail = email.toLowerCase().trim();
+
+  // Find user by email
+  const user = await User.findOne({ email: cleanEmail });
+
+  if (!user) {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
+
+  // Check if user has set a password
+  if (!user.password) {
+    res.status(400);
+    throw new Error("Please reset your password using 'Forgot Password'");
+  }
+
+  // Verify password
+  const isPasswordValid = await user.matchPassword(password);
+
+  if (!isPasswordValid) {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
+
+  // Return user data with token
+  res.json({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  address: user.address,
+  pincode: user.pincode,
+  userType: user.userType,
+  pharmacyName: user.pharmacyName,
+  token: generateToken(user._id, user.userType),
+  message: "Login successful"
+});
+});
+
+/* ---------------------------------------------------------
+   RESET PASSWORD - Verify OTP and Set New Password
+--------------------------------------------------------- */
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  if (!email || !otp || !newPassword) {
+    res.status(400);
+    throw new Error("Email, OTP, and new password are required");
+  }
+
+  if (newPassword.length < 6) {
+    res.status(400);
+    throw new Error("Password must be at least 6 characters long");
+  }
+
+  const cleanEmail = email.toLowerCase().trim();
+  const user = await User.findOne({ email: cleanEmail });
 
   if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
 
-  if (name) user.name = name;
-  if (phone) user.phone = phone;
-  if (address) user.address = address;
+  // Check if OTP exists
+  if (!user.otp || !user.otpExpires) {
+    res.status(400);
+    throw new Error("Please request OTP first");
+  }
+
+  // Verify OTP expiry
+  if (Date.now() > new Date(user.otpExpires).getTime()) {
+    res.status(400);
+    throw new Error("OTP expired. Please request a new one");
+  }
+
+  // Verify OTP match
+  if (user.otp.toString().trim() !== otp.toString().trim()) {
+    res.status(400);
+    throw new Error("Incorrect OTP");
+  }
+
+  // Reset password
+  user.password = newPassword;
+  user.otp = null;
+  user.otpExpires = null;
+  await user.save();
+
+  res.json({ 
+    message: "Password reset successfully. You can now login with your new password",
+    token: generateToken(user._id, user.userType),
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      userType: user.userType,
+      pharmacyName: user.pharmacyName
+    }
+  });
+});
+
+/* ---------------------------------------------------------
+   UPDATE USER PROFILE
+--------------------------------------------------------- */
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const { name, phone, address, pincode, pharmacyName, licenseNumber } = req.body;
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  // Always allow fields to update, even if empty
+  if (name !== undefined) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  if (address !== undefined) user.address = address;
+  if (pincode !== undefined) user.pincode = pincode;
 
   if (user.userType === "pharmacist") {
-    if (pharmacyName) user.pharmacyName = pharmacyName;
-    if (licenseNumber) user.licenseNumber = licenseNumber;
+    if (pharmacyName !== undefined) user.pharmacyName = pharmacyName;
+    if (licenseNumber !== undefined) user.licenseNumber = licenseNumber;
   }
 
   const updatedUser = await user.save();
 
-  res.status(200).json(updatedUser);
-});
-
-/* ---------------------------------------------------------
-   REGISTER
---------------------------------------------------------- */
-const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, userType, pharmacyName } = req.body;
-
-  if (!name || !email || !password || !userType) {
-    res.status(400);
-    throw new Error("Missing required fields");
-  }
-
-  const userExists = await User.findOne({ email });
-
-  if (userExists) {
-    res.status(400);
-    throw new Error("User already exists");
-  }
-
-  const data = {
-    name,
-    email,
-    password,
-    userType,
-    isVerified: true,
-  };
-
-  if (userType === "pharmacist") {
-    if (!pharmacyName) {
-      res.status(400);
-      throw new Error("Pharmacy name required");
-    }
-    data.pharmacyName = pharmacyName;
-  }
-
-  const user = await User.create(data);
-
-  res.json({
-    ...user.toObject(),
-    token: generateToken(user._id, user.userType),
+  // Return full user info (not raw mongoose object)
+  res.status(200).json({
+    _id: updatedUser._id,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    phone: updatedUser.phone,
+    address: updatedUser.address,
+    pincode: updatedUser.pincode,
+    userType: updatedUser.userType,
+    pharmacyName: updatedUser.pharmacyName,
+    licenseNumber: updatedUser.licenseNumber,
+    isVerified: updatedUser.isVerified,
+    createdAt: updatedUser.createdAt,
   });
 });
 
+
+
 /* ---------------------------------------------------------
-   LOGIN
+   VERIFY OTP - Legacy support (can be removed if not needed)
 --------------------------------------------------------- */
-const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+const verifyOtp = asyncHandler(async (req, res) => {
+  res.status(400);
+  throw new Error("This endpoint is deprecated. Please use /register for signup and /login for login");
+});
 
-  const user = await User.findOne({ email });
-
-  if (!user || !(await user.matchPassword(password))) {
-    res.status(400);
-    throw new Error("Invalid credentials");
-  }
-
-  res.json({
-    ...user.toObject(),
-    token: generateToken(user._id, user.userType),
-  });
+/* ---------------------------------------------------------
+   SET PASSWORD - Legacy support (can be removed if not needed)
+--------------------------------------------------------- */
+const setPassword = asyncHandler(async (req, res) => {
+  res.status(400);
+  throw new Error("This endpoint is deprecated. Please use /reset-password for password recovery");
 });
 
 /* ---------------------------------------------------------
    EXPORTS
 --------------------------------------------------------- */
 module.exports = {
-  sendOtp,
-  verifyOtp,
-  registerUser,
-  loginUser,
+  sendOtp,           // For forgot password only
+  verifyOtp,         // Deprecated
+  registerUser,      // Email + Password signup
+  loginUser,         // Email + Password login
   getUserProfile,
   updateUserProfile,
+  setPassword,       // Deprecated
+  resetPassword,     // For forgot password flow
 };

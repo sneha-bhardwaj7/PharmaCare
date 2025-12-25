@@ -18,10 +18,6 @@ const app = express();
 
 // Middleware
 
-// 🚨 CORS FIX 🚨
-// We use the wildcard '*' to allow all origins. 
-// This is the simplest way to support local development and Vercel preview links
-// (like 'pharma-care-eqoh.vercel.app') during development/staging.
 app.use(cors({
     origin: [
         'http://localhost:5173',
@@ -50,6 +46,10 @@ app.use("/uploads", express.static("uploads"));
 
 const prescriptionRoutes = require("./routers/prescriptionRoutes");
 app.use("/api/prescriptions", prescriptionRoutes);
+
+// order Routes
+app.use("/api/orders", require("./routers/orderRoutes"));
+
 
 
 // Error Handler (should be last)

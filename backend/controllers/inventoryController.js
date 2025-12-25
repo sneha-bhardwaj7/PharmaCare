@@ -10,53 +10,76 @@ const Medicine = require("../models/Medicine");
    @access  Private (Pharmacist only)
 --------------------------------------------------------- */
 
-const getAlerts = asyncHandler(async (req, res) => {
-    const medicines = await Medicine.find({ user: req.user._id });
+// Utility function (days until expiry)
+const daysUntilExpiry = (expiry) => {
+  const today = new Date();
+  return Math.ceil((new Date(expiry) - today) / (1000 * 60 * 60 * 24));
+};
 
-    const today = new Date();
-    const next30Days = new Date();
-    next30Days.setDate(today.getDate() + 30);
+// --- Get Low Stock Medicines ---
+const getLowStockMedicines = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
 
-    const alerts = {
-        lowStock: [],
-        expiringSoon: [],
-        expired: []
-    };
+  const lowStock = await Medicine.find({
+    user: userId,
+    $or: [
+      { stock: { $lte: 0 } },
+      { $expr: { $lte: ["$stock", "$reorderLevel"] } }
+    ]
+  }).sort({ stock: 1 });
 
-    medicines.forEach(m => {
-        // Low stock condition
-        if (m.stock <= m.reorderLevel) {
-            alerts.lowStock.push({
-                name: m.name,
-                stock: m.stock,
-                reorderLevel: m.reorderLevel,
-                batch: m.batch
-            });
-        }
-
-        // Expiry logic
-        const expiryDate = new Date(m.expiry);
-
-        if (expiryDate < today) {
-            alerts.expired.push({
-                name: m.name,
-                expiry: m.expiry,
-                batch: m.batch
-            });
-        } else if (expiryDate <= next30Days) {
-            alerts.expiringSoon.push({
-                name: m.name,
-                expiry: m.expiry,
-                daysLeft: Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24)),
-                batch: m.batch
-            });
-        }
-    });
-
-    res.status(200).json(alerts);
+  res.json(lowStock);
 });
 
+// --- Get Expiring Soon Medicines ---
+const getExpiringSoonMedicines = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const today = new Date();
+  const thresholdDate = new Date(today);
+  thresholdDate.setDate(thresholdDate.getDate() + 30);
 
+  const expiringSoon = await Medicine.find({
+    user: userId,
+    expiry: { $lte: thresholdDate, $gte: today }
+  }).sort({ expiry: 1 });
+
+  const formatted = expiringSoon.map(m => ({
+    ...m._doc,
+    daysLeft: daysUntilExpiry(m.expiry)
+  }));
+
+  res.json(formatted);
+});
+
+// --- Dashboard Alert Aggregator ---
+const getAlerts = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const today = new Date();
+  const thresholdDate = new Date();
+  thresholdDate.setDate(today.getDate() + 30);
+
+  const allMedicines = await Medicine.find({ user: userId });
+
+  const lowStock = [];
+  const expiringSoon = [];
+  const expired = [];
+
+  allMedicines.forEach(med => {
+    const daysLeft = daysUntilExpiry(med.expiry);
+
+    if (med.stock <= 0 || med.stock <= med.reorderLevel) {
+      lowStock.push(med);
+    }
+
+    if (daysLeft < 0) {
+      expired.push(med);
+    } else if (daysLeft <= 30) {
+      expiringSoon.push({ ...med._doc, daysLeft });
+    }
+  });
+
+  res.json({ lowStock, expiringSoon, expired });
+});
 
 const getMedicines = asyncHandler(async (req, res) => {
     // 1. Fetch only the medicines belonging to the logged-in user (pharmacist)
@@ -165,5 +188,7 @@ module.exports = {
     addMedicine,
     updateMedicine,
     deleteMedicine,
-     getAlerts,
+     getLowStockMedicines,
+    getExpiringSoonMedicines,
+    getAlerts,
 };

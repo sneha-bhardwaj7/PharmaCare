@@ -1,29 +1,31 @@
-// backend/routes/inventoryRoutes.js
-
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
+
 const {
-    getMedicines,
-    addMedicine,
-    updateMedicine,
-    deleteMedicine,
-} = require('../controllers/inventoryController');
-const { protect } = require('../middleware/authMiddleware'); // ASSUMED AUTH MIDDLEWARE
+  getLowStockMedicines,
+  getExpiringSoonMedicines,
+  getAlerts,
+  getMedicines,
+  addMedicine,
+  updateMedicine,
+  deleteMedicine,
+} = require("../controllers/inventoryController");
 
-// Base route: /api/inventory
+// Dashboard alert aggregation
+router.get("/alerts", protect, getAlerts);
 
+// New Required Endpoints
+router.get("/low-stock", protect, getLowStockMedicines);
+router.get("/expiring-soon", protect, getExpiringSoonMedicines);
 
-const { getAlerts } = require('../controllers/inventoryController');
+// Inventory CRUD
+router.route("/")
+  .get(protect, getMedicines)
+  .post(protect, addMedicine);
 
-router.get('/alerts', protect, getAlerts);
-
-
-router.route('/')
-    .get(protect, getMedicines)   // GET all inventory items
-    .post(protect, addMedicine);  // POST to add a new item
-
-router.route('/:id')
-    .put(protect, updateMedicine) // PUT to update a specific item
-    .delete(protect, deleteMedicine); // DELETE a specific item
+router.route("/:id")
+  .put(protect, updateMedicine)
+  .delete(protect, deleteMedicine);
 
 module.exports = router;

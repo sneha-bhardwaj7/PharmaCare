@@ -18,6 +18,7 @@ const Profile = () => {
     email: '',
     phone: '',
     address: '',
+    pincode: '',  
     pharmacyName: '',
     licenseNumber: ''
   });
@@ -48,6 +49,7 @@ const Profile = () => {
           email: data.email || '',
           phone: data.phone || '',
           address: data.address || '',
+           pincode: data.pincode || '',  
           pharmacyName: data.pharmacyName || '',
           licenseNumber: data.licenseNumber || ''
         });
@@ -80,7 +82,16 @@ const Profile = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${auth.token}`
         },
-        body: JSON.stringify(formData)
+       body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+          pincode: formData.pincode ? Number(formData.pincode) : user.pincode,
+          pharmacyName: formData.pharmacyName,
+          licenseNumber: formData.licenseNumber
+        })
+
+
       });
 
       if (res.ok) {
@@ -111,6 +122,7 @@ const Profile = () => {
       email: user?.email || '',
       phone: user?.phone || '',
       address: user?.address || '',
+      pincode: user?.pincode || '',
       pharmacyName: user?.pharmacyName || '',
       licenseNumber: user?.licenseNumber || ''
     });
@@ -306,6 +318,30 @@ const Profile = () => {
                 </div>
               )}
             </div>
+
+            <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
+                    <MapPin className="h-4 w-4 text-blue-600" />
+                    <span>Pincode</span>
+                  </label>
+
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={formData.pincode}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none"
+                      placeholder="Enter pincode"
+                      maxLength={6}
+                    />
+                  ) : (
+                    <div className="px-4 py-3 bg-gray-50 rounded-xl text-gray-800 font-medium">
+                      {user?.pincode || 'Not provided'}
+                    </div>
+                  )}
+                </div>
+
 
             {/* Pharmacist-specific fields */}
             {user?.userType === 'pharmacist' && (

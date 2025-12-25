@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 
 const {
   uploadPrescription,
@@ -13,17 +12,8 @@ const {
 const { protect } = require("../middleware/authMiddleware");
 const { onlyPharmacist } = require("../middleware/roleMiddleware");
 
-/* ---------- MULTER STORAGE ---------- */
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
-
-const upload = multer({ storage });
+// NEW: Cloud upload middleware (stores file in memory, not local disk)
+const upload = require("../middleware/uploadMiddleware");
 
 /* --------------------- ROUTES --------------------------- */
 

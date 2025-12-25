@@ -13,26 +13,29 @@ const ProfileView = ({ userRole }) => {
   useEffect(() => {
     const loadUserData = () => {
       try {
-        const userInfo = localStorage.getItem('userInfo');
+        const stored = localStorage.getItem("user_auth");
         console.log('📥 Loading profile data:', userInfo);
         
         if (userInfo) {
-          const parsedUser = JSON.parse(userInfo);
+          const parsedUser = JSON.parse(stored);
+
           
           // Set default values for fields that might not exist
           const userData = {
-            name: parsedUser.name || 'User',
-            email: parsedUser.email || '',
-            phone: parsedUser.phone || '',
-            address: parsedUser.address || '',
-            dateOfBirth: parsedUser.dateOfBirth || '',
-            gender: parsedUser.gender || '',
-            licenseNumber: parsedUser.licenseNumber || '',
-            pharmacyName: parsedUser.pharmacyName || '',
-            userType: parsedUser.userType || userRole,
-            isVerified: parsedUser.isVerified || false,
-            memberSince: parsedUser.createdAt || parsedUser.memberSince || new Date().toISOString()
-          };
+          name: parsedUser.name || 'User',
+          email: parsedUser.email || '',
+          phone: parsedUser.phone || '',
+          address: parsedUser.address || '',
+          pincode: parsedUser.pincode || '',
+          dateOfBirth: parsedUser.dateOfBirth || '',
+          gender: parsedUser.gender || '',
+          licenseNumber: parsedUser.licenseNumber || '',
+          pharmacyName: parsedUser.pharmacyName || '',
+          userType: parsedUser.userType || userRole,
+          isVerified: parsedUser.isVerified || false,
+          memberSince: parsedUser.createdAt || parsedUser.memberSince || new Date().toISOString()
+        };
+
           
           console.log('✅ Profile data loaded:', userData);
           setProfileData(userData);
@@ -79,8 +82,11 @@ const ProfileView = ({ userRole }) => {
       const userInfo = localStorage.getItem('userInfo');
       if (userInfo) {
         const currentUser = JSON.parse(userInfo);
-        const updatedUser = { ...currentUser, ...tempData };
-        localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        localStorage.setItem('user_auth', JSON.stringify({
+          ...currentUser,
+          ...tempData
+        }));
+
         console.log('✅ Profile updated in localStorage');
       }
     } catch (error) {
@@ -352,6 +358,28 @@ const ProfileView = ({ userRole }) => {
                 </p>
               )}
             </div>
+
+            <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <span>Pincode</span>
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={tempData.pincode}
+                        onChange={(e) => handleInputChange('pincode', e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition"
+                        placeholder="Enter your pincode"
+                        maxLength="6"
+                      />
+                    ) : (
+                      <p className="text-gray-900 font-medium bg-gray-50 px-4 py-3 rounded-xl">
+                        {profileData.pincode || 'Not provided'}
+                      </p>
+                    )}
+                  </div>
+
 
             {(profileData.userType === 'pharmacist' || userRole === 'pharmacist') && (
               <>

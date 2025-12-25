@@ -8,6 +8,7 @@ import { getDaysUntilExpiry } from '../utils.js';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+
 const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
   // --- Local state for alerts ---
   const [alerts, setAlerts] = useState({
@@ -20,54 +21,66 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   // --- Auth token ---
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const getAuthToken = () => {
+  const authData = JSON.parse(localStorage.getItem('user_auth'));
+  return authData ? `Bearer ${authData.token}` : null;
+  };
+
 
   // --- Safe getters for sales and today's revenue ---
   const todaySales = Array.isArray(sales) && sales.length > 0 
     ? sales[sales.length - 1] 
     : { revenue: 0, orders: 0, date: new Date() };
 
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const defaultFilter = urlParams.get("filter");
+
+    if(defaultFilter === "low") {
+      setFilterCategory('low');
+    }
+
   // --- Fetch alerts from backend ---
   const fetchAlerts = useCallback(async () => {
-    if (!token) {
-      setAlertsError('No auth token found');
-      return;
+  const authToken = getAuthToken();
+  if (!authToken) return;
+
+  setLoadingAlerts(true);
+  setAlertsError(null);
+
+  try {
+    const res = await fetch(`${API_URL}/inventory/alerts`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authToken,
+      },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to fetch alerts (${res.status})`);
     }
 
-    setLoadingAlerts(true);
-    setAlertsError(null);
+    const data = await res.json();
 
-    try {
-      const res = await fetch(`${API_URL}/inventory/alerts`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    setAlerts({
+      lowStock: Array.isArray(data.lowStock) ? data.lowStock : [],
+      expiringSoon: Array.isArray(data.expiringSoon) ? data.expiringSoon : [],
+      expired: Array.isArray(data.expired) ? data.expired : [],
+    });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Failed to fetch alerts (${res.status})`);
-      }
+    setLastRefresh(new Date());
+  } catch (error) {
+    console.error("Error fetching alerts:", error);
+    setAlertsError(error.message || "Unable to load alerts");
+  } finally {
+    setLoadingAlerts(false);
+  }
+}, []);
 
-      const data = await res.json();
 
-      // Ensure arrays exist
-      setAlerts({
-        lowStock: Array.isArray(data.lowStock) ? data.lowStock : [],
-        expiringSoon: Array.isArray(data.expiringSoon) ? data.expiringSoon : [],
-        expired: Array.isArray(data.expired) ? data.expired : [],
-      });
-      
-      setLastRefresh(new Date());
-    } catch (error) {
-      console.error('Error fetching alerts:', error);
-      setAlertsError(error.message || 'Unable to load alerts');
-    } finally {
-      setLoadingAlerts(false);
-    }
-  }, [token]);
+
 
   // --- Fetch alerts on mount ---
   useEffect(() => {
@@ -142,6 +155,7 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
           color="#8B5CF6"
         />
       </div>
+      
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Sales Trend */}
@@ -204,7 +218,7 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
                   <div className="space-y-2">
                     <Alert 
                       type="danger"
-                      title={`⚠️ ${expiredCount} Medicines Expired`}
+                      title={` ${expiredCount} Medicines Expired`}
                       description="Remove expired medicines from inventory immediately"
                       action="View Details"
                     />
@@ -234,7 +248,7 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
                   <div className="space-y-2">
                     <Alert 
                       type="warning"
-                      title={`📦 ${lowStockCount} Items Low on Stock`}
+                      title={` ${lowStockCount} Items Low on Stock`}
                       description="These items need to be reordered soon"
                       action="Reorder Now"
                     />
@@ -264,7 +278,7 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
                   <div className="space-y-2">
                     <Alert 
                       type="info"
-                      title={`⏰ ${expiringCount} Medicines Expiring Soon`}
+                      title={`${expiringCount} Medicines Expiring Soon`}
                       description="Medicines expiring within 30 days"
                       action="Review Now"
                     />

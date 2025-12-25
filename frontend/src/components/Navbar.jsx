@@ -87,8 +87,7 @@ const Navbar = ({
         { id: 'inventory', label: 'Inventory', icon: Package },
         { id: 'prescriptions', label: 'Prescriptions', icon: FileText },
         { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-        // { id: 'find-medicine', label: 'Find Medicine', icon: Search },
-        // { id: 'upload-rx', label: 'Upload Rx', icon: Upload }
+        { id: 'orders-dashboard', label: ' Orders', icon: ShoppingCart }
       ];
     } else if (userRole === 'customer') {
       return [
@@ -149,7 +148,7 @@ const Navbar = ({
 
 
   return (
-    <nav className={`bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 text-white shadow-2xl sticky top-0 z-50 transition-all duration-300 ${
+    <nav className={`bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 text-white static shadow-2xl top-0 z-50 transition-all duration-300 ${
       scrolled ? 'py-2 shadow-xl backdrop-blur-md bg-opacity-95' : 'py-0'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -26,6 +26,11 @@ export const getAuthUser = () => {
   return data ? JSON.parse(data) : null;
 };
 
+export const isExpiringSoon = (expiry) => {
+    const days = getDaysUntilExpiry(expiry);
+    return days <= 30 && days >= 0;
+};
+
 /**
  * Calculates the number of days until a given expiry date.
  * @param {string} expiryDateString - Expiry date in 'YYYY-MM-DD' format.
