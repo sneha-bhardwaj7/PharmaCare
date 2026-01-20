@@ -10,6 +10,8 @@ lerna-debug.log*
 # Dependency directories
 node_modules/
 .env
+.env.*
+
 dist/
 dist-ssr/
 *.local

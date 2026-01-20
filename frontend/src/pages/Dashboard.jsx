@@ -6,7 +6,7 @@ import StatsCard from '../components/StatsCard.jsx';
 import Alert from '../components/Alert.jsx';
 import { getDaysUntilExpiry } from '../utils.js';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
 
 const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
   // --- Local state for alerts ---

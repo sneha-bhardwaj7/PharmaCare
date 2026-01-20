@@ -955,8 +955,9 @@ const PharmacyAIChatbot = () => {
         return;
       }
 
-      // Call your actual inventory endpoint
-      const response = await fetch('http://localhost:5000/api/inventory', {
+      const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
+
+      const response = await fetch(`${API_URL}/inventory`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1019,23 +1020,27 @@ const PharmacyAIChatbot = () => {
       if (!token) return null;
 
       let endpoint = '';
-      switch(type) {
-        case 'orders':
-          endpoint = authData?.user?.userType === 'pharmacist' 
-            ? 'http://localhost:5000/api/orders/pharmacist-orders'
-            : 'http://localhost:5000/api/orders/my-orders';
-          break;
-        case 'prescriptions':
-          endpoint = 'http://localhost:5000/api/prescriptions/all';
-          break;
-        case 'analytics':
-          endpoint = 'http://localhost:5000/api/analytics/pharmacist';
-          break;
-        case 'alerts':
-          endpoint = 'http://localhost:5000/api/inventory/alerts';
-          break;
-      }
+      const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
 
+        switch (type) {
+          case 'orders':
+            endpoint = authData?.user?.userType === 'pharmacist'
+              ? `${API_URL}/orders/pharmacist-orders`
+              : `${API_URL}/orders/my-orders`;
+            break;
+
+          case 'prescriptions':
+            endpoint = `${API_URL}/prescriptions/all`;
+            break;
+
+          case 'analytics':
+            endpoint = `${API_URL}/analytics/pharmacist`;
+            break;
+
+          case 'alerts':
+            endpoint = `${API_URL}/inventory/alerts`;
+            break;
+        }
       if (!endpoint) return null;
 
       const response = await fetch(endpoint, {

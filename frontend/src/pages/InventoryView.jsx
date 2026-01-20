@@ -4,7 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Plus, Edit, Trash2, X } from 'lucide-react';
 import { getStockStatus, getDaysUntilExpiry } from '../utils';
 
-const API_BASE_URL = 'http://localhost:5000/api/inventory';
+const API_BASE_URL = `${
+  import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"
+}/api/inventory`;
 
 // Helper function to get auth token
 const getAuthToken = () => {
@@ -373,7 +375,7 @@ const InventoryView = () => {
           <p className="font-semibold">Troubleshooting:</p>
           <ul className="list-disc list-inside mt-2 text-sm">
             <li>Check browser console (F12) for errors</li>
-            <li>Verify backend is running on http://localhost:5000</li>
+            <li>Verify backend is running on {VITE_BACKEND_BASEURL}</li>
             <li>Check if you're logged in (token in localStorage)</li>
             <li>Verify CORS is enabled on backend</li>
           </ul>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Plus } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api/inventory';
+const API_BASE_URL = `${import.meta.env.VITE_BACKEND_BASEURL}/api/inventory`;
 
 // Default state for a new medicine
 const initialFormState = {
