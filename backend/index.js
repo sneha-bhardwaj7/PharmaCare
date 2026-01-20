@@ -23,23 +23,26 @@ const app = express();
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (Postman, mobile apps)
+    // Allow Postman, mobile apps
     if (!origin) return callback(null, true);
 
-    const allowedOrigins = [
-      "http://localhost:5173",
-      "https://pharma-care-pcc8.vercel.app",
-      "https://pharma-care-207.vercel.app" // 👈 ADD THIS
-    ];
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // ✅ Allow ALL Vercel deployments (preview + prod)
+    if (
+      origin.includes("vercel.app") ||
+      origin === "http://localhost:5173"
+    ) {
+      return callback(null, true);
     }
+
+    // ❌ DO NOT THROW ERROR (this breaks preflight)
+    return callback(null, false);
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+app.options("*", cors());
 
 
 app.use(express.json());
