@@ -22,13 +22,24 @@ const app = express();
 // Middleware
 
 app.use(cors({
-    origin: [
-        'http://localhost:5173',
-        'https://pharma-care-pcc8.vercel.app', // Your known main domain
-        '*' // Allows all Vercel preview domains and other origins
-    ],
-    credentials: true
+  origin: function (origin, callback) {
+    // allow requests with no origin (Postman, mobile apps)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://pharma-care-pcc8.vercel.app'
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -47,9 +58,6 @@ app.get('/', (req, res) => {
 
 // Prescription Routes
 app.use("/uploads", express.static("uploads"));
-
-
-app.use("/api/prescriptions", prescriptionRoutes);
 
 // Add this with your other route registrations
 app.use("/api/analytics", analyticsRoutes);
