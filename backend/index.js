@@ -27,8 +27,9 @@ app.use(cors({
     if (!origin) return callback(null, true);
 
     const allowedOrigins = [
-      'http://localhost:5173',
-      'https://pharma-care-pcc8.vercel.app'
+      "http://localhost:5173",
+      "https://pharma-care-pcc8.vercel.app",
+      "https://pharma-care-207.vercel.app" // 👈 ADD THIS
     ];
 
     if (allowedOrigins.includes(origin)) {
