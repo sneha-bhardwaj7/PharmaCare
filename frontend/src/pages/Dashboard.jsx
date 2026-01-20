@@ -1,15 +1,16 @@
 // frontend/src/pages/Dashboard.jsx
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { DollarSign, Package, AlertTriangle, FileText, TrendingUp, Bell, RefreshCw } from 'lucide-react';
+import { 
+  DollarSign, Package, AlertTriangle, FileText, TrendingUp, 
+  Bell, RefreshCw, ShoppingCart, Award, Activity 
+} from 'lucide-react';
 import StatsCard from '../components/StatsCard.jsx';
 import Alert from '../components/Alert.jsx';
-import { getDaysUntilExpiry } from '../utils.js';
 
 const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
 
 const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
-  // --- Local state for alerts ---
   const [alerts, setAlerts] = useState({
     lowStock: [],
     expiringSoon: [],
@@ -18,18 +19,14 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
   const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [alertsError, setAlertsError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-
-  // --- Analytics state ---
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
-  // --- Auth token ---
   const getAuthToken = () => {
     const authData = JSON.parse(localStorage.getItem('user_auth'));
     return authData ? `Bearer ${authData.token}` : null;
   };
 
-  // --- Fetch analytics from backend ---
   const fetchAnalytics = useCallback(async () => {
     const authToken = getAuthToken();
     if (!authToken) return;
@@ -50,6 +47,7 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
       }
 
       const data = await res.json();
+      console.log("📊 Analytics Data:", data);
       setAnalyticsData(data);
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -58,7 +56,6 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
     }
   }, []);
 
-  // --- Fetch alerts from backend ---
   const fetchAlerts = useCallback(async () => {
     const authToken = getAuthToken();
     if (!authToken) return;
@@ -97,30 +94,35 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
     }
   }, []);
 
-  // --- Refresh both alerts and analytics ---
   const refreshData = useCallback(async () => {
     await Promise.all([fetchAlerts(), fetchAnalytics()]);
   }, [fetchAlerts, fetchAnalytics]);
 
-  // --- Fetch data on mount ---
   useEffect(() => {
     refreshData();
   }, [refreshData]);
 
-  // --- Auto-refresh data every 5 minutes ---
   useEffect(() => {
     const interval = setInterval(() => {
       refreshData();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [refreshData]);
 
-  // --- Get today's revenue and orders from analytics ---
-  const todaySales = analyticsData?.dailyRevenue?.[6] || { revenue: 0, orders: 0, date: new Date() };
-  
-  // --- Get weekly sales data from analytics ---
   const weeklySalesData = analyticsData?.dailyRevenue || [];
+  const stats = analyticsData?.stats || {};
+  
+  const todaySales = weeklySalesData[6] || { revenue: 0, orders: 0 };
+  const yesterdaySales = weeklySalesData[5] || { revenue: 0, orders: 0 };
+  
+  let revenueChange = null;
+  if (yesterdaySales.revenue > 0) {
+    const change = ((todaySales.revenue - yesterdaySales.revenue) / yesterdaySales.revenue) * 100;
+    revenueChange = change >= 0 ? `+${change.toFixed(1)}%` : `${change.toFixed(1)}%`;
+  } else if (todaySales.revenue > 0) {
+    revenueChange = "+100%";
+  }
 
   const lowStockCount = alerts.lowStock.length;
   const expiringCount = alerts.expiringSoon.length;
@@ -131,20 +133,23 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-800">Dashboard Overview</h2>
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-500">
-            Last updated: {lastRefresh.toLocaleTimeString()}
+      {/* Header with Total Revenue */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-4xl font-bold mb-2">Dashboard Overview</h2>
+            <p className="text-blue-100 text-lg mb-4">Real-time insights into your pharmacy business</p>
+            
+            
           </div>
+          
           <button
             onClick={refreshData}
             disabled={loadingAlerts || loadingAnalytics}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50"
+            className="bg-white/20 hover:bg-white/30 p-4 rounded-xl transition disabled:opacity-50 self-start"
             title="Refresh data"
           >
-            <RefreshCw className={`h-4 w-4 ${(loadingAlerts || loadingAnalytics) ? 'animate-spin' : ''}`} />
-            <span className="text-sm">Refresh</span>
+            <RefreshCw className={`h-6 w-6 ${(loadingAlerts || loadingAnalytics) ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -157,7 +162,7 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
           value={loadingAnalytics ? '...' : `₹${(todaySales.revenue || 0).toLocaleString()}`}
           subtitle={loadingAnalytics ? 'Loading...' : `${todaySales.orders || 0} orders`}
           color="#10B981"
-          trend={analyticsData?.stats?.weeklyRevenue > 0 ? "+12.5%" : undefined}
+          trend={revenueChange}
         />
         <StatsCard 
           icon={Package} 
@@ -187,8 +192,9 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
         <div className="bg-white rounded-xl shadow-md p-6">
           <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
             <TrendingUp className="mr-2 h-5 w-5 text-blue-600" />
-            Weekly Sales Trend
+            Revenue Trend (Last 7 Days)
           </h3>
+
           <div className="space-y-3">
             {loadingAnalytics ? (
               <div className="text-sm text-gray-500 text-center py-8">
@@ -199,27 +205,33 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
               weeklySalesData.map((day, idx) => {
                 const maxRevenue = Math.max(...weeklySalesData.map(d => d.revenue), 1);
                 const widthPercent = Math.min(100, ((day.revenue || 0) / maxRevenue) * 100);
+                const isToday = idx === 6;
                 
                 return (
-                  <div key={idx} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 w-24">
+                  <div key={idx} className={`flex items-center justify-between ${isToday ? 'bg-blue-50 p-2 rounded-lg' : ''}`}>
+                    <span className={`text-sm ${isToday ? 'font-bold text-blue-700' : 'text-gray-600'} w-32`}>
                       {new Date(day.date).toLocaleDateString('en-US', { 
                         weekday: 'short', 
                         month: 'short', 
                         day: 'numeric' 
                       })}
+                      {isToday && ' (Today)'}
                     </span>
                     <div className="flex items-center space-x-3 flex-1">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2.5">
                         <div 
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                          className={`h-2.5 rounded-full transition-all duration-500 ${
+                            isToday 
+                              ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                              : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                          }`}
                           style={{ width: `${widthPercent}%` }}
                         />
                       </div>
-                      <span className="text-sm font-semibold text-gray-700 w-24 text-right">
+                      <span className={`text-sm ${isToday ? 'font-bold text-blue-700' : 'font-semibold text-gray-700'} w-24 text-right`}>
                         ₹{(day.revenue || 0).toLocaleString()}
                       </span>
-                      <span className="text-xs text-gray-500 w-16 text-right">
+                      <span className={`text-xs ${isToday ? 'text-blue-600' : 'text-gray-500'} w-16 text-right`}>
                         {day.orders} {day.orders === 1 ? 'order' : 'orders'}
                       </span>
                     </div>
@@ -251,14 +263,12 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
               </div>
             ) : (
               <>
-                {/* EXPIRED MEDICINES - Highest Priority */}
                 {expiredCount > 0 && (
                   <div className="space-y-2">
                     <Alert 
                       type="danger"
-                      title={` ${expiredCount} Medicines Expired`}
+                      title={`🚨 ${expiredCount} Medicines Expired`}
                       description="Remove expired medicines from inventory immediately"
-                      action="View Details"
                     />
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
                       {alerts.expired.slice(0, 3).map((item, idx) => (
@@ -274,21 +284,19 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
                       ))}
                       {alerts.expired.length > 3 && (
                         <div className="text-xs text-red-600 font-semibold pt-2 border-t border-red-200">
-                          + {alerts.expired.length - 3} more expired items
+                          + {alerts.expired.length - 3} more
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* LOW STOCK ITEMS */}
                 {lowStockCount > 0 && (
                   <div className="space-y-2">
                     <Alert 
                       type="warning"
-                      title={` ${lowStockCount} Items Low on Stock`}
+                      title={`⚠️ ${lowStockCount} Items Low on Stock`}
                       description="These items need to be reordered soon"
-                      action="Reorder Now"
                     />
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
                       {alerts.lowStock.slice(0, 3).map((item, idx) => (
@@ -298,50 +306,46 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
                             <span className="text-yellow-700 ml-2">({item.batch})</span>
                           </div>
                           <span className="text-xs text-yellow-700 font-medium">
-                            Stock: {item.stock} / Min: {item.reorderLevel}
+                            Stock: {item.stock}
                           </span>
                         </div>
                       ))}
                       {alerts.lowStock.length > 3 && (
                         <div className="text-xs text-yellow-700 font-semibold pt-2 border-t border-yellow-200">
-                          + {alerts.lowStock.length - 3} more low stock items
+                          + {alerts.lowStock.length - 3} more
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* EXPIRING SOON */}
                 {expiringCount > 0 && (
                   <div className="space-y-2">
                     <Alert 
                       type="info"
-                      title={`${expiringCount} Medicines Expiring Soon`}
-                      description="Medicines expiring within 30 days"
-                      action="Review Now"
+                      title={`ℹ️ ${expiringCount} Medicines Expiring Soon`}
+                      description="Expiring within 30 days"
                     />
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
                       {alerts.expiringSoon.slice(0, 3).map((item, idx) => (
                         <div key={idx} className="flex justify-between items-center text-sm">
                           <div>
                             <span className="font-semibold text-blue-900">{item.name}</span>
-                            <span className="text-blue-700 ml-2">({item.batch})</span>
                           </div>
                           <span className="text-xs text-blue-700 font-medium">
-                            {item.daysLeft} days left
+                            {item.daysLeft} days
                           </span>
                         </div>
                       ))}
                       {alerts.expiringSoon.length > 3 && (
                         <div className="text-xs text-blue-700 font-semibold pt-2 border-t border-blue-200">
-                          + {alerts.expiringSoon.length - 3} more expiring items
+                          + {alerts.expiringSoon.length - 3} more
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* ALL GOOD */}
                 {expiredCount === 0 && lowStockCount === 0 && expiringCount === 0 && (
                   <Alert 
                     type="success"

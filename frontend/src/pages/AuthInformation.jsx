@@ -133,9 +133,7 @@ export default function AuthInformation() {
               <span>Comprehensive Healthcare Solutions</span>
             </div>
             <h2 className="text-5xl font-bold text-gray-900 mb-4">Our Services</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Everything you need for your healthcare journey, powered by technology and trust
-            </p>
+           
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">

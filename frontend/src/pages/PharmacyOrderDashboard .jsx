@@ -190,7 +190,7 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">Everything you need for your healthcare journey, powered by technology and trust
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>

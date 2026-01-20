@@ -7,36 +7,37 @@ const getPharmacistAnalytics = asyncHandler(async (req, res) => {
   const pharmacistId = req.user._id;
   
   try {
-    // Get all orders for this pharmacist with error handling
+    // Get all orders for this pharmacist
     const allOrders = await Order.find({ pharmacyId: pharmacistId }).lean();
     
     // Calculate date ranges
     const now = new Date();
     const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
-    // Orders from last 7 days
-    const recentOrders = allOrders.filter(order => 
-      new Date(order.createdAt) >= last7Days
-    );
-    
-    // Calculate revenue by status
+    // Calculate revenue by status - ONLY completed/delivered orders count
     const completedOrders = allOrders.filter(o => 
       o.status === 'completed' || o.status === 'delivered'
     );
     
+    // Total revenue from completed orders
     const totalRevenue = completedOrders.reduce((sum, order) => {
       const orderTotal = parseFloat(order.total) || 0;
       return sum + orderTotal;
     }, 0);
     
-    const weeklyRevenue = recentOrders
-      .filter(o => o.status === 'completed' || o.status === 'delivered')
-      .reduce((sum, order) => {
-        const orderTotal = parseFloat(order.total) || 0;
-        return sum + orderTotal;
-      }, 0);
+    // Weekly revenue - completed orders from last 7 days
+    // KEY FIX: Use updatedAt (when status changed) instead of createdAt
+    const weeklyCompletedOrders = completedOrders.filter(order => {
+      const completionDate = new Date(order.updatedAt);
+      return completionDate >= last7Days;
+    });
     
-    // Daily revenue for last 7 days
+    const weeklyRevenue = weeklyCompletedOrders.reduce((sum, order) => {
+      const orderTotal = parseFloat(order.total) || 0;
+      return sum + orderTotal;
+    }, 0);
+    
+    // Daily revenue for last 7 days - GROUPED BY COMPLETION DATE
     const dailyRevenue = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date(now);
@@ -44,10 +45,10 @@ const getPharmacistAnalytics = asyncHandler(async (req, res) => {
       const dayStart = new Date(date.setHours(0, 0, 0, 0));
       const dayEnd = new Date(date.setHours(23, 59, 59, 999));
       
-      const dayOrders = allOrders.filter(order => {
-        const orderDate = new Date(order.createdAt);
-        return orderDate >= dayStart && orderDate <= dayEnd && 
-               (order.status === 'completed' || order.status === 'delivered');
+      // Filter by updatedAt (completion date) instead of createdAt
+      const dayOrders = completedOrders.filter(order => {
+        const completionDate = new Date(order.updatedAt);
+        return completionDate >= dayStart && completionDate <= dayEnd;
       });
       
       const revenue = dayOrders.reduce((sum, order) => {
@@ -68,7 +69,7 @@ const getPharmacistAnalytics = asyncHandler(async (req, res) => {
     completedOrders.forEach(order => {
       if (order.items && Array.isArray(order.items)) {
         order.items.forEach(item => {
-          if (!item.name) return; // Skip invalid items
+          if (!item.name) return;
           
           if (!medicineStats[item.name]) {
             medicineStats[item.name] = {
@@ -95,7 +96,7 @@ const getPharmacistAnalytics = asyncHandler(async (req, res) => {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
     
-    // Category distribution - with error handling for Medicine model
+    // Category distribution
     let categoryStats = {};
     let allMedicines = [];
     
@@ -114,16 +115,14 @@ const getPharmacistAnalytics = asyncHandler(async (req, res) => {
       });
     } catch (medicineError) {
       console.error("Medicine fetch error:", medicineError);
-      // Continue with empty medicine data
     }
     
-    // Format category distribution
     const categoryDistribution = Object.values(categoryStats).map(cat => ({
       ...cat,
       value: parseFloat(cat.value.toFixed(2))
     }));
     
-    // Calculate inventory value safely
+    // Calculate inventory value
     const inventoryValue = allMedicines.reduce((sum, m) => {
       const stock = parseInt(m.stock) || 0;
       const price = parseFloat(m.price) || 0;
@@ -151,10 +150,13 @@ const getPharmacistAnalytics = asyncHandler(async (req, res) => {
       dailyRevenue,
       topMedicines,
       categoryDistribution,
-      recentOrders: recentOrders.slice(0, 10).map(order => ({
-        ...order,
-        total: parseFloat(order.total) || 0
-      }))
+      recentOrders: allOrders
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 10)
+        .map(order => ({
+          ...order,
+          total: parseFloat(order.total) || 0
+        }))
     });
     
   } catch (error) {
