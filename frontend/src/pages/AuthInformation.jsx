@@ -25,6 +25,8 @@ import {
   ArrowRight,
 } from "lucide-react"
 import serviceImg1 from "../assets/serviceImg1.png"
+import digitalP from "../assets/digitalP.jpg"
+import delivery from "../assets/delivery.jpg"
 
 export default function AuthInformation() {
   const [currentTestimonial, setCurrentTestimonial] = useState(0)
@@ -89,7 +91,7 @@ export default function AuthInformation() {
       
 
       {/* Stats Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-blue-700">
+      <section className="py-10 px-4 bg-gradient-to-r from-blue-600 to-blue-700">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 text-center text-white">
             <div
@@ -119,187 +121,6 @@ export default function AuthInformation() {
             >
               <div className="text-5xl font-bold">4.8★</div>
               <div className="text-blue-100 font-semibold">Customer Rating</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section id="services" className="py-8 px-4 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16 animate-fade-in">
-            <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold mb-4">
-              <Store className="h-4 w-4" />
-              <span>Comprehensive Healthcare Solutions</span>
-            </div>
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Our Services</h2>
-           
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="flex items-start gap-4">
-
-                <div className="bg-gray-600 rounded-2xl p-4 w-fit mb-6  group-hover:scale-110 transition-transform">
-                <PackageSearch className="h-20 w-10 text-white" />
-              </div>
-
-                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
-                <img
-                  src={serviceImg1}
-                  alt="Find Medicines"
-                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Find Medicines</h3>
-              <p className="text-gray-600 leading-relaxed mb-4">
-                Search from thousands of genuine medicines across nearby pharmacies in real-time.
-              </p>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Real-time stock updates</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Compare prices instantly</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-gradient-to-br from-yellow-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="flex items-start gap-4">
-
-                <div className="bg-yellow-600 rounded-2xl p-4 w-fit mb-6  group-hover:scale-110 transition-transform">
-                <FileText className="h-20 w-10 text-white" />
-              </div>
-
-                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-yellow-200 to-yellow-100">
-                <img
-                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Digital Prescriptions"
-                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Digital Prescriptions</h3>
-              <p className="text-gray-600 leading-relaxed mb-4">
-                Upload and manage your prescriptions digitally. Access them anytime, anywhere.
-              </p>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Secure cloud storage</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Easy sharing with doctors</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-gradient-to-br from-pink-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="flex items-start gap-4"> 
-                <div className="bg-pink-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <Truck className="h-20 w-10 text-white" />
-              </div>
-
-                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-pink-200 to-pink-100">
-                <img
-                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Fast Delivery"
-                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Fast Delivery</h3>
-              <p className="text-gray-600 leading-relaxed mb-4">
-                Get medicines delivered to your doorstep in just 15 minutes. Free shipping available.
-              </p>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>GPS-tracked delivery</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span>Contact-free options</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-green-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="flex items-start gap-4">
-
-                <div className="bg-green-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <HeartPulse className="h-20 w-10 text-white" />
-              </div>
-
-
-                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-green-200 to-green-100">
-                <img
-                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Health Monitoring"
-                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Health Monitoring</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Track your medications, set reminders, and monitor your health journey with our smart tools.
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-white p-8 rounded-2xl shadow-lg border-2 border-purple-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="flex items-start gap-4">
-
-                <div className="bg-purple-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <Phone className="h-20 w-10 text-white" />
-              </div>
-
-                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-purple-200 to-purple-100">
-                <img
-                  src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="24/7 Consultation"
-                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              
-
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">24/7 Consultation</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Connect with licensed pharmacists anytime for medication advice and health queries.
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-50 to-white p-8 rounded-2xl shadow-lg border-2 border-orange-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="flex items-start gap-4">
-
-                <div className="bg-orange-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <Award className="h-20 w-10 text-white" />
-              </div>
-
-                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-orange-200 to-orange-100">
-                <img
-                  src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                  alt="Loyalty Rewards"
-                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Loyalty Rewards</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Earn points on every purchase and unlock exclusive discounts and health benefits.
-              </p>
             </div>
           </div>
         </div>
@@ -400,6 +221,189 @@ export default function AuthInformation() {
           </div>
         </div>
       </section>
+
+      {/* Services Section */}
+      <section id="services" className="py-8 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold mb-4">
+              <Store className="h-4 w-4" />
+              <span>Comprehensive Healthcare Solutions</span>
+            </div>
+            <h2 className="text-5xl font-bold text-gray-900 mb-4">Our Services</h2>
+           
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <div className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-gray-600 rounded-2xl p-4 w-fit mb-6  group-hover:scale-110 transition-transform">
+                <PackageSearch className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
+                <img
+                  src={serviceImg1}
+                  alt="Find Medicines"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+              
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Find Medicines</h3>
+              <p className="text-gray-600 leading-relaxed mb-4">
+                Search from thousands of genuine medicines across nearby pharmacies in real-time.
+              </p>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Real-time stock updates</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Compare prices instantly</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-gradient-to-br from-yellow-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-yellow-600 rounded-2xl p-4 w-fit mb-6  group-hover:scale-110 transition-transform">
+                <FileText className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-yellow-200 to-yellow-100">
+                <img
+                  src={digitalP}
+                  alt="Digital Prescriptions"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+              
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Digital Prescriptions</h3>
+              <p className="text-gray-600 leading-relaxed mb-4">
+                Upload and manage your prescriptions digitally. Access them anytime, anywhere.
+              </p>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Secure cloud storage</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Easy sharing with doctors</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-gradient-to-br from-pink-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
+              <div className="flex items-start gap-4"> 
+                <div className="bg-pink-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <Truck className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-pink-200 to-pink-100">
+                <img
+                  src={delivery}
+                  alt="Fast Delivery"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+              
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Fast Delivery</h3>
+              <p className="text-gray-600 leading-relaxed mb-4">
+                Get medicines delivered to your doorstep in just 15 minutes. Free shipping available.
+              </p>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>GPS-tracked delivery</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Contact-free options</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-gradient-to-br from-green-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-green-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <HeartPulse className="h-20 w-10 text-white" />
+              </div>
+
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-green-200 to-green-100">
+                <img
+                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+                  alt="Health Monitoring"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+              
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Health Monitoring</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Track your medications, set reminders, and monitor your health journey with our smart tools.
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-white p-8 rounded-2xl shadow-lg border-2 border-purple-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-purple-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <Phone className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-purple-200 to-purple-100">
+                <img
+                  src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+                  alt="24/7 Consultation"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+              
+
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">24/7 Consultation</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Connect with licensed pharmacists anytime for medication advice and health queries.
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-orange-50 to-white p-8 rounded-2xl shadow-lg border-2 border-orange-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-orange-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <Award className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-orange-200 to-orange-100">
+                <img
+                  src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+                  alt="Loyalty Rewards"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+              </div>
+              
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Loyalty Rewards</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Earn points on every purchase and unlock exclusive discounts and health benefits.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      
 
       {/* Testimonials Carousel Section */}
       <section id="testimonials" className="py-8 px-4 bg-white relative overflow-hidden">
@@ -553,7 +557,7 @@ export default function AuthInformation() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-24 px-4 bg-white">
+      {/* <section id="contact" className="py-24 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
@@ -635,7 +639,7 @@ export default function AuthInformation() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-blue-700">

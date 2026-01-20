@@ -1,6 +1,4 @@
-// frontend/src/pages/Dashboard.jsx
-
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { 
   DollarSign, Package, AlertTriangle, FileText, TrendingUp, 
   Bell, RefreshCw, ShoppingCart, Award, Activity 
@@ -8,27 +6,39 @@ import {
 import StatsCard from '../components/StatsCard.jsx';
 import Alert from '../components/Alert.jsx';
 
-const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
+// Create caches outside the component to persist across unmounts
+const dashboardCache = {
+  analytics: null,
+  alerts: null,
+  timestamp: null,
+  isValid() {
+    // Cache is valid for 3 minutes
+    return this.analytics && this.alerts && this.timestamp && (Date.now() - this.timestamp < 3 * 60 * 1000);
+  }
+};
 
 const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
-  const [alerts, setAlerts] = useState({
+  const [alerts, setAlerts] = useState(dashboardCache.alerts || {
     lowStock: [],
     expiringSoon: [],
     expired: []
   });
-  const [loadingAlerts, setLoadingAlerts] = useState(false);
+  const [loadingAlerts, setLoadingAlerts] = useState(!dashboardCache.isValid());
   const [alertsError, setAlertsError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState(dashboardCache.analytics);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(!dashboardCache.isValid());
+  const hasFetched = useRef(false);
 
-  const getAuthToken = () => {
-    const authData = JSON.parse(localStorage.getItem('user_auth'));
-    return authData ? `Bearer ${authData.token}` : null;
-  };
+  // Memoize API_URL and auth token
+  const { API_URL, authToken } = useMemo(() => {
+    const apiUrl = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
+    const authData = JSON.parse(localStorage.getItem('user_auth') || '{}');
+    const token = authData?.token ? `Bearer ${authData.token}` : null;
+    return { API_URL: apiUrl, authToken: token };
+  }, []);
 
   const fetchAnalytics = useCallback(async () => {
-    const authToken = getAuthToken();
     if (!authToken) return;
 
     setLoadingAnalytics(true);
@@ -49,15 +59,17 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
       const data = await res.json();
       console.log("📊 Analytics Data:", data);
       setAnalyticsData(data);
+      // Update cache
+      dashboardCache.analytics = data;
+      dashboardCache.timestamp = Date.now();
     } catch (error) {
       console.error("Error fetching analytics:", error);
     } finally {
       setLoadingAnalytics(false);
     }
-  }, []);
+  }, [API_URL, authToken]);
 
   const fetchAlerts = useCallback(async () => {
-    const authToken = getAuthToken();
     if (!authToken) return;
 
     setLoadingAlerts(true);
@@ -79,31 +91,50 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
 
       const data = await res.json();
 
-      setAlerts({
+      const alertsData = {
         lowStock: Array.isArray(data.lowStock) ? data.lowStock : [],
         expiringSoon: Array.isArray(data.expiringSoon) ? data.expiringSoon : [],
         expired: Array.isArray(data.expired) ? data.expired : [],
-      });
+      };
 
+      setAlerts(alertsData);
       setLastRefresh(new Date());
+      
+      // Update cache
+      dashboardCache.alerts = alertsData;
+      dashboardCache.timestamp = Date.now();
     } catch (error) {
       console.error("Error fetching alerts:", error);
       setAlertsError(error.message || "Unable to load alerts");
     } finally {
       setLoadingAlerts(false);
     }
-  }, []);
+  }, [API_URL, authToken]);
 
   const refreshData = useCallback(async () => {
+    hasFetched.current = false;
     await Promise.all([fetchAlerts(), fetchAnalytics()]);
   }, [fetchAlerts, fetchAnalytics]);
 
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+    // Only fetch if we don't have valid cached data and haven't fetched yet
+    if (!dashboardCache.isValid() && !hasFetched.current) {
+      hasFetched.current = true;
+      refreshData();
+    } else if (dashboardCache.isValid()) {
+      // Use cached data immediately
+      if (!analyticsData) setAnalyticsData(dashboardCache.analytics);
+      if (alerts.lowStock.length === 0 && alerts.expiringSoon.length === 0 && alerts.expired.length === 0) {
+        setAlerts(dashboardCache.alerts);
+      }
+      setLoadingAlerts(false);
+      setLoadingAnalytics(false);
+    }
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
+      hasFetched.current = false;
       refreshData();
     }, 5 * 60 * 1000);
 
@@ -139,8 +170,6 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
           <div>
             <h2 className="text-4xl font-bold mb-2">Dashboard Overview</h2>
             <p className="text-blue-100 text-lg mb-4">Real-time insights into your pharmacy business</p>
-            
-            
           </div>
           
           <button

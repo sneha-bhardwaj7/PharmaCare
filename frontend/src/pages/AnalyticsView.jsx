@@ -1,16 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   DollarSign, ShoppingCart, Package, TrendingUp, Download, 
   RefreshCw, Calendar, Award, TrendingDown, Activity 
 } from 'lucide-react';
 
-const AnalyticsView = () => {
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Create a cache outside the component to persist across unmounts
+const analyticsCache = {
+  data: null,
+  timestamp: null,
+  isValid() {
+    // Cache is valid for 5 minutes
+    return this.data && this.timestamp && (Date.now() - this.timestamp < 5 * 60 * 1000);
+  }
+};
 
-const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
-  const authData = JSON.parse(localStorage.getItem("user_auth") || '{}');
-  const token = authData?.token;
+const AnalyticsView = () => {
+  const [analyticsData, setAnalyticsData] = useState(analyticsCache.data);
+  const [loading, setLoading] = useState(!analyticsCache.isValid());
+  const hasFetched = useRef(false);
+
+  // Move these outside of render cycle - memoize them
+  const { API_URL, token } = useMemo(() => {
+    const apiUrl = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
+    const authData = JSON.parse(localStorage.getItem("user_auth") || '{}');
+    const authToken = authData?.token;
+    return { API_URL: apiUrl, token: authToken };
+  }, []);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -23,6 +38,9 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
         const data = await res.json();
         console.log("📊 Analytics data:", data);
         setAnalyticsData(data);
+        // Update cache
+        analyticsCache.data = data;
+        analyticsCache.timestamp = Date.now();
       } else {
         console.error("Failed to fetch analytics");
       }
@@ -34,7 +52,15 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
   };
 
   useEffect(() => {
-    fetchAnalytics();
+    // Only fetch if we don't have valid cached data and haven't fetched yet
+    if (!analyticsCache.isValid() && !hasFetched.current) {
+      hasFetched.current = true;
+      fetchAnalytics();
+    } else if (analyticsCache.isValid() && !analyticsData) {
+      // Use cached data immediately
+      setAnalyticsData(analyticsCache.data);
+      setLoading(false);
+    }
   }, []);
 
   if (loading) {
@@ -58,6 +84,11 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
 
   const { stats, dailyRevenue, topMedicines, categoryDistribution } = analyticsData;
 
+  const handleRefresh = () => {
+    hasFetched.current = false;
+    fetchAnalytics();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -68,7 +99,7 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
             <p className="text-blue-100 text-lg">Real-time insights into your pharmacy business</p>
           </div>
           <button
-            onClick={fetchAnalytics}
+            onClick={handleRefresh}
             className="bg-white/20 hover:bg-white/30 p-3 rounded-xl transition flex items-center gap-2"
           >
             <RefreshCw className="h-5 w-5" />

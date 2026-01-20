@@ -3,72 +3,71 @@ import {
   Package, CheckCircle, XCircle, Clock, AlertCircle,
   Phone, MapPin, User, ShoppingCart, TrendingUp,
   Filter, Search, Calendar, DollarSign, Truck,
-  PlayCircle, Box, CheckCheck
+  PlayCircle, Box, CheckCheck, FileText, Pill
 } from 'lucide-react';
 
 const PharmacistOrderDashboard = () => {
+  const [activeSection, setActiveSection] = useState('orders'); // 'orders' or 'prescriptions'
   const [orders, setOrders] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    processing: 0,
-    completed: 0,
-    revenue: 0
+    orders: { total: 0, pending: 0, processing: 0, completed: 0, revenue: 0 },
+    prescriptions: { total: 0, pending: 0, quoted: 0, approved: 0, rejected: 0 }
   });
 
-const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000"}/api`;
   const authData = JSON.parse(localStorage.getItem("user_auth") || '{}');
   const token = authData?.token;
 
-  // Fetch orders for this pharmacist
-  const fetchOrders = async () => {
+  // Fetch all data
+  const fetchAllData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/orders/pharmacist-orders`, {
+      // Fetch orders
+      const ordersRes = await fetch(`${API_URL}/orders/pharmacist-orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Fetched orders:", data);
-        
-        // Handle both response formats
-        const orderList = data.orders || data || [];
-        
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        const orderList = ordersData.orders || ordersData || [];
         setOrders(Array.isArray(orderList) ? orderList : []);
-        calculateStats(Array.isArray(orderList) ? orderList : []);
-      } else {
-        console.error("Failed to fetch orders:", res.status);
-        setOrders([]);
+        calculateOrderStats(Array.isArray(orderList) ? orderList : []);
+      }
+
+      // Fetch prescriptions
+      const prescriptionsRes = await fetch(`${API_URL}/prescriptions/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (prescriptionsRes.ok) {
+        const prescriptionsData = await prescriptionsRes.json();
+        const prescriptionList = prescriptionsData.prescriptions || prescriptionsData || [];
+        setPrescriptions(Array.isArray(prescriptionList) ? prescriptionList : []);
+        calculatePrescriptionStats(Array.isArray(prescriptionList) ? prescriptionList : []);
       }
     } catch (err) {
-      console.error("Error fetching orders:", err);
-      setOrders([]);
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchAllData();
     
-    // Poll for new orders every 30 seconds
-    const interval = setInterval(fetchOrders, 30000);
+    // Poll for new data every 30 seconds
+    const interval = setInterval(fetchAllData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate statistics
-  const calculateStats = (orderList) => {
-    if (!Array.isArray(orderList)) {
-      console.error("calculateStats: orderList is not an array", orderList);
-      return;
-    }
-
-    const stats = {
+  // Calculate order statistics
+  const calculateOrderStats = (orderList) => {
+    const orderStats = {
       total: orderList.length,
       pending: orderList.filter(o => o.status === 'pending').length,
       processing: orderList.filter(o => o.status === 'processing').length,
@@ -77,7 +76,19 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
         .filter(o => o.status === 'completed' || o.status === 'delivered')
         .reduce((sum, o) => sum + (o.total || 0), 0)
     };
-    setStats(stats);
+    setStats(prev => ({ ...prev, orders: orderStats }));
+  };
+
+  // Calculate prescription statistics
+  const calculatePrescriptionStats = (prescriptionList) => {
+    const prescriptionStats = {
+      total: prescriptionList.length,
+      pending: prescriptionList.filter(p => p.status === 'pending').length,
+      quoted: prescriptionList.filter(p => p.status === 'quoted').length,
+      approved: prescriptionList.filter(p => p.status === 'approved').length,
+      rejected: prescriptionList.filter(p => p.status === 'rejected').length
+    };
+    setStats(prev => ({ ...prev, prescriptions: prescriptionStats }));
   };
 
   // Update order status
@@ -94,8 +105,8 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
 
       if (res.ok) {
         alert(`Order status updated to ${newStatus}!`);
-        fetchOrders();
-        setSelectedOrder(null);
+        fetchAllData();
+        setSelectedItem(null);
       } else {
         const error = await res.json();
         alert(error.message || "Failed to update order status");
@@ -107,8 +118,9 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
   };
 
   // Get status info
-  const getStatusInfo = (status) => {
+  const getStatusInfo = (status, type = 'order') => {
     const statusMap = {
+      // Order statuses
       pending: { 
         color: 'bg-yellow-500', 
         text: 'Pending', 
@@ -148,109 +160,246 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
         bgClass: 'bg-red-50', 
         textClass: 'text-red-700',
         borderClass: 'border-red-300'
+      },
+      // Prescription statuses
+      quoted: { 
+        color: 'bg-blue-500', 
+        text: 'Quoted', 
+        icon: DollarSign, 
+        bgClass: 'bg-blue-50', 
+        textClass: 'text-blue-700',
+        borderClass: 'border-blue-300'
+      },
+      approved: { 
+        color: 'bg-green-500', 
+        text: 'Approved', 
+        icon: CheckCircle, 
+        bgClass: 'bg-green-50', 
+        textClass: 'text-green-700',
+        borderClass: 'border-green-300'
+      },
+      rejected: { 
+        color: 'bg-red-500', 
+        text: 'Rejected', 
+        icon: XCircle, 
+        bgClass: 'bg-red-50', 
+        textClass: 'text-red-700',
+        borderClass: 'border-red-300'
       }
     };
     return statusMap[status] || statusMap.pending;
   };
 
-  // Filter orders
-  const filteredOrders = Array.isArray(orders) ? orders.filter(order => {
-    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    const matchesSearch = 
-      order._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.items?.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesStatus && matchesSearch;
-  }) : [];
+  // Filter items based on active section
+  const getFilteredItems = () => {
+    const items = activeSection === 'orders' ? orders : prescriptions;
+    
+    return items.filter(item => {
+      const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
+      const matchesSearch = 
+        item._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.patientName && item.patientName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.user?.name && item.user.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.items?.some(i => i.name.toLowerCase().includes(searchQuery.toLowerCase())));
+      return matchesStatus && matchesSearch;
+    });
+  };
 
-  // Get available actions for order status
-  const getAvailableActions = (currentStatus) => {
-    const actions = {
-      pending: [
-        { label: 'Accept Order', status: 'processing', color: 'bg-blue-600 hover:bg-blue-700' },
-        { label: 'Reject Order', status: 'cancelled', color: 'bg-red-600 hover:bg-red-700' }
-      ],
-      processing: [
-        { label: 'Mark as Completed', status: 'completed', color: 'bg-green-600 hover:bg-green-700' },
-        { label: 'Out for Delivery', status: 'delivered', color: 'bg-purple-600 hover:bg-purple-700' }
-      ],
-      completed: [
-        { label: 'Mark as Delivered', status: 'delivered', color: 'bg-purple-600 hover:bg-purple-700' }
-      ]
-    };
-    return actions[currentStatus] || [];
+  const filteredItems = getFilteredItems();
+
+  // Get available actions
+  const getAvailableActions = (item) => {
+    if (activeSection === 'orders') {
+      const actions = {
+        pending: [
+          { label: 'Accept Order', status: 'processing', color: 'bg-blue-600 hover:bg-blue-700' },
+          { label: 'Cancel', status: 'cancelled', color: 'bg-red-600 hover:bg-red-700' }
+        ],
+        processing: [
+          { label: 'Mark Completed', status: 'completed', color: 'bg-green-600 hover:bg-green-700' },
+          { label: 'Out for Delivery', status: 'delivered', color: 'bg-purple-600 hover:bg-purple-700' }
+        ],
+        completed: [
+          { label: 'Mark Delivered', status: 'delivered', color: 'bg-purple-600 hover:bg-purple-700' }
+        ]
+      };
+      return actions[item.status] || [];
+    } else {
+      // Prescription actions - handled separately
+      return [];
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
-        <h2 className="text-4xl font-bold mb-2"> Order Management</h2>
-        <p className="text-blue-100 text-lg">Manage incoming orders from customers</p>
+        <h2 className="text-4xl font-bold mb-2">Dashboard</h2>
+        <p className="text-blue-100 text-lg">Manage orders and prescription requests</p>
+      </div>
+
+      {/* Section Toggle */}
+      <div className="bg-white rounded-xl shadow-md p-2 flex gap-2">
+        <button
+          onClick={() => {
+            setActiveSection('orders');
+            setFilterStatus('all');
+          }}
+          className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all ${
+            activeSection === 'orders'
+              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <div className="flex items-center justify-center gap-3">
+            <ShoppingCart className="h-6 w-6" />
+            <span>Orders ({stats.orders.total})</span>
+          </div>
+        </button>
+        <button
+          onClick={() => {
+            setActiveSection('prescriptions');
+            setFilterStatus('all');
+          }}
+          className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg transition-all ${
+            activeSection === 'prescriptions'
+              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <div className="flex items-center justify-center gap-3">
+            <FileText className="h-6 w-6" />
+            <span>Prescriptions ({stats.prescriptions.total})</span>
+          </div>
+        </button>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-semibold">Total Orders</p>
-              <p className="text-3xl font-bold text-gray-800">{stats.total}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <ShoppingCart className="h-6 w-6 text-blue-600" />
+      {activeSection === 'orders' ? (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Total Orders</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.orders.total}</p>
+              </div>
+              <div className="bg-blue-100 p-2 rounded-full">
+                <ShoppingCart className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-semibold">Pending</p>
-              <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
-            </div>
-            <div className="bg-yellow-100 p-3 rounded-full">
-              <Clock className="h-6 w-6 text-yellow-600" />
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-yellow-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.orders.pending}</p>
+              </div>
+              <div className="bg-yellow-100 p-2 rounded-full">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-semibold">Processing</p>
-              <p className="text-3xl font-bold text-blue-600">{stats.processing}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <PlayCircle className="h-6 w-6 text-blue-600" />
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Processing</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.orders.processing}</p>
+              </div>
+              <div className="bg-blue-100 p-2 rounded-full">
+                <PlayCircle className="h-5 w-5 text-blue-600" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-semibold">Completed</p>
-              <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Completed</p>
+                <p className="text-2xl font-bold text-green-600">{stats.orders.completed}</p>
+              </div>
+              <div className="bg-green-100 p-2 rounded-full">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-semibold">Revenue</p>
-              <p className="text-2xl font-bold text-purple-600">₹{stats.revenue.toFixed(2)}</p>
-            </div>
-            <div className="bg-purple-100 p-3 rounded-full">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-purple-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Revenue</p>
+                <p className="text-xl font-bold text-purple-600">₹{stats.orders.revenue.toFixed(0)}</p>
+              </div>
+              <div className="bg-purple-100 p-2 rounded-full">
+                <TrendingUp className="h-5 w-5 text-purple-600" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-purple-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Total Rx</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.prescriptions.total}</p>
+              </div>
+              <div className="bg-purple-100 p-2 rounded-full">
+                <FileText className="h-5 w-5 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-yellow-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.prescriptions.pending}</p>
+              </div>
+              <div className="bg-yellow-100 p-2 rounded-full">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Quoted</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.prescriptions.quoted}</p>
+              </div>
+              <div className="bg-blue-100 p-2 rounded-full">
+                <DollarSign className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Approved</p>
+                <p className="text-2xl font-bold text-green-600">{stats.prescriptions.approved}</p>
+              </div>
+              <div className="bg-green-100 p-2 rounded-full">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 border-l-4 border-red-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold">Rejected</p>
+                <p className="text-2xl font-bold text-red-600">{stats.prescriptions.rejected}</p>
+              </div>
+              <div className="bg-red-100 p-2 rounded-full">
+                <XCircle className="h-5 w-5 text-red-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filter */}
       <div className="bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row gap-4">
@@ -258,7 +407,7 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by Order ID, customer name, or medicine..."
+            placeholder={`Search ${activeSection}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
@@ -266,196 +415,145 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
         </div>
         
         <div className="flex gap-2 overflow-x-auto">
-          {['all', 'pending', 'processing', 'completed', 'delivered', 'cancelled'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`px-6 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
-                filterStatus === status
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+          {activeSection === 'orders' ? (
+            ['all', 'pending', 'processing', 'completed', 'delivered', 'cancelled'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
+                  filterStatus === status
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))
+          ) : (
+            ['all', 'pending', 'quoted', 'approved', 'rejected'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-4 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
+                  filterStatus === status
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Orders List */}
+      {/* Items List - 3 per row */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600 font-semibold">Loading orders...</p>
+          <p className="text-gray-600 font-semibold">Loading {activeSection}...</p>
         </div>
-      ) : filteredOrders.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <div className="bg-white rounded-xl shadow-md p-12 text-center">
           <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-800 mb-2">No Orders Found</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">No {activeSection} Found</h3>
           <p className="text-gray-600">
             {filterStatus === 'all' 
-              ? "No orders yet. They'll appear here when customers place orders."
-              : `No ${filterStatus} orders at the moment.`}
+              ? `No ${activeSection} yet.`
+              : `No ${filterStatus} ${activeSection} at the moment.`}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredOrders.map((order) => {
-            const statusInfo = getStatusInfo(order.status);
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredItems.map((item) => {
+            const statusInfo = getStatusInfo(item.status, activeSection);
             const StatusIcon = statusInfo.icon;
             
             return (
               <div
-                key={order._id}
-                className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all overflow-hidden border-2 ${statusInfo.borderClass}`}
+                key={item._id}
+                className={`bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all overflow-hidden border-2 ${statusInfo.borderClass}`}
               >
-                {/* Order Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-5 text-white">
-                  <div className="flex items-start justify-between">
+                {/* Card Header */}
+                <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 text-white">
+                  <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-bold text-lg mb-1">Order #{order._id.slice(-8)}</h3>
-                      <div className="flex items-center gap-2 text-sm text-blue-100">
-                        <Calendar className="h-4 w-4" />
-                        <span>{new Date(order.createdAt).toLocaleDateString('en-IN')}</span>
-                        <Clock className="h-4 w-4 ml-2" />
-                        <span>{new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <h3 className="font-bold text-sm">
+                        {activeSection === 'orders' ? 'Order' : 'Prescription'} #{item._id.slice(-6)}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-blue-100 mt-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>{new Date(item.createdAt).toLocaleDateString('en-IN')}</span>
                       </div>
                     </div>
-                    <span className={`${statusInfo.bgClass} ${statusInfo.textClass} px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2`}>
-                      <StatusIcon className="h-4 w-4" />
+                    <span className={`${statusInfo.bgClass} ${statusInfo.textClass} px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1`}>
+                      <StatusIcon className="h-3 w-3" />
                       {statusInfo.text}
                     </span>
                   </div>
                 </div>
 
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   {/* Customer Info */}
-                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <User className="h-5 w-5 text-blue-600" />
-                      Customer Details
-                    </h4>
-                    <div className="space-y-2 text-sm">
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div className="space-y-1 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-700">Name:</span>
-                        <span className="text-gray-800">{order.user?.name || 'N/A'}</span>
+                        <User className="h-3 w-3 text-blue-600" />
+                        <span className="font-semibold">{activeSection === 'orders' ? item.user?.name : item.patientName}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-green-600" />
-                        <span className="text-gray-800">{order.phone || order.user?.phone || 'N/A'}</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-800">{order.address}</span>
+                        <Phone className="h-3 w-3 text-green-600" />
+                        <span>{item.phone}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Order Items */}
-                  <div>
-                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <Box className="h-5 w-5 text-purple-600" />
-                      Order Items ({order.items?.length || 0})
-                    </h4>
-                    <div className="space-y-2">
-                      {order.items?.map((item, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center border border-gray-200">
-                          <div>
-                            <p className="font-semibold text-gray-800">{item.name}</p>
-                            <p className="text-sm text-gray-600">Quantity: {item.quantity} × ₹{item.price.toFixed(2)}</p>
+                  {/* Items */}
+                  {item.items && item.items.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-800 mb-2">Items ({item.items.length})</h4>
+                      <div className="space-y-1">
+                        {item.items.slice(0, 2).map((medicine, idx) => (
+                          <div key={idx} className="bg-gray-50 rounded p-2 text-xs flex justify-between">
+                            <span className="font-medium">{medicine.name}</span>
+                            {medicine.price > 0 && (
+                              <span className="font-bold text-purple-600">₹{medicine.price}</span>
+                            )}
                           </div>
-                          <p className="font-bold text-purple-600">₹{(item.price * item.quantity).toFixed(2)}</p>
-                        </div>
-                      ))}
+                        ))}
+                        {item.items.length > 2 && (
+                          <p className="text-xs text-gray-500 text-center">+{item.items.length - 2} more</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Total */}
-                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border-2 border-purple-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-purple-600" />
-                        <span className="font-bold text-gray-800">Total Amount:</span>
-                      </div>
-                      <span className="text-2xl font-bold text-purple-600">₹{order.total.toFixed(2)}</span>
+                  {(item.total > 0 || item.totalAmount > 0) && (
+                    <div className="bg-purple-50 rounded-lg p-3 border border-purple-200 flex justify-between items-center">
+                      <span className="text-xs font-bold text-gray-800">Total:</span>
+                      <span className="text-lg font-bold text-purple-600">₹{(item.total || item.totalAmount).toFixed(2)}</span>
                     </div>
-                    <div className="mt-2 text-sm text-gray-600">
-                      Payment: {order.paymentMethod || 'Cash on Delivery'}
-                    </div>
-                  </div>
+                  )}
 
                   {/* Action Buttons */}
-                  {getAvailableActions(order.status).length > 0 && (
-                    <div className="grid grid-cols-2 gap-3 pt-4">
-                      {getAvailableActions(order.status).map((action, idx) => (
+                  {getAvailableActions(item).length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {getAvailableActions(item).map((action, idx) => (
                         <button
                           key={idx}
-                          onClick={() => updateOrderStatus(order._id, action.status)}
-                          className={`${action.color} text-white px-4 py-3 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg`}
+                          onClick={() => updateOrderStatus(item._id, action.status)}
+                          className={`${action.color} text-white px-3 py-2 rounded-lg text-xs font-semibold transition-all`}
                         >
                           {action.label}
                         </button>
                       ))}
                     </div>
                   )}
-
-                  {/* View Details Button */}
-                  <button
-                    onClick={() => setSelectedOrder(order)}
-                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-3 rounded-xl font-semibold transition-all"
-                  >
-                    View Full Details
-                  </button>
                 </div>
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Order Details Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedOrder(null)}>
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-2xl font-bold">Order Details</h3>
-                  <p className="text-blue-100 text-sm mt-1">Order ID: {selectedOrder._id}</p>
-                </div>
-                <button onClick={() => setSelectedOrder(null)} className="text-white hover:bg-white/20 rounded-full p-2">
-                  <XCircle className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="bg-blue-50 rounded-xl p-4">
-                <h4 className="font-bold text-gray-800 mb-3">Customer Information</h4>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-semibold">Name:</span> {selectedOrder.user?.name}</p>
-                  <p><span className="font-semibold">Email:</span> {selectedOrder.user?.email}</p>
-                  <p><span className="font-semibold">Phone:</span> {selectedOrder.phone || selectedOrder.user?.phone}</p>
-                  <p><span className="font-semibold">Address:</span> {selectedOrder.address}</p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                {getAvailableActions(selectedOrder.status).map((action, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      updateOrderStatus(selectedOrder._id, action.status);
-                      setSelectedOrder(null);
-                    }}
-                    className={`${action.color} text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg`}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

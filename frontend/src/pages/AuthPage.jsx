@@ -440,7 +440,7 @@ const AuthPage = ({ onLogin, onLogout }) => {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-9 pb-24 px-4 relative overflow-hidden">
+      <section className="pt-9 pb-8 px-4 relative overflow-hidden">
         <div className="absolute top-20 left-0 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
         

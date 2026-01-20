@@ -486,7 +486,7 @@ const Navbar = ({
                       </div>
                     </button>
                     
-                    <button 
+                    {/* <button 
                       onClick={() => {
                         navigate('/app/settings');
                         setShowProfileMenu(false);
@@ -500,7 +500,7 @@ const Navbar = ({
                         <span className="text-sm font-semibold">Settings</span>
                         <p className="text-xs text-gray-500">Preferences & privacy</p>
                       </div>
-                    </button>
+                    </button> */}
                     
                     <hr className="my-1" />
                     
