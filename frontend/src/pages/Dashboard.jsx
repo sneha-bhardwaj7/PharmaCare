@@ -8,7 +8,6 @@ import { getDaysUntilExpiry } from '../utils.js';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-
 const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
   // --- Local state for alerts ---
   const [alerts, setAlerts] = useState({
@@ -20,81 +19,108 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
   const [alertsError, setAlertsError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
+  // --- Analytics state ---
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
   // --- Auth token ---
   const getAuthToken = () => {
-  const authData = JSON.parse(localStorage.getItem('user_auth'));
-  return authData ? `Bearer ${authData.token}` : null;
+    const authData = JSON.parse(localStorage.getItem('user_auth'));
+    return authData ? `Bearer ${authData.token}` : null;
   };
 
+  // --- Fetch analytics from backend ---
+  const fetchAnalytics = useCallback(async () => {
+    const authToken = getAuthToken();
+    if (!authToken) return;
 
-  // --- Safe getters for sales and today's revenue ---
-  const todaySales = Array.isArray(sales) && sales.length > 0 
-    ? sales[sales.length - 1] 
-    : { revenue: 0, orders: 0, date: new Date() };
+    setLoadingAnalytics(true);
 
+    try {
+      const res = await fetch(`${API_URL}/analytics/pharmacist`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authToken,
+        },
+      });
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const defaultFilter = urlParams.get("filter");
+      if (!res.ok) {
+        throw new Error(`Failed to fetch analytics (${res.status})`);
+      }
 
-    if(defaultFilter === "low") {
-      setFilterCategory('low');
+      const data = await res.json();
+      setAnalyticsData(data);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    } finally {
+      setLoadingAnalytics(false);
     }
+  }, []);
 
   // --- Fetch alerts from backend ---
   const fetchAlerts = useCallback(async () => {
-  const authToken = getAuthToken();
-  if (!authToken) return;
+    const authToken = getAuthToken();
+    if (!authToken) return;
 
-  setLoadingAlerts(true);
-  setAlertsError(null);
+    setLoadingAlerts(true);
+    setAlertsError(null);
 
-  try {
-    const res = await fetch(`${API_URL}/inventory/alerts`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: authToken,
-      },
-    });
+    try {
+      const res = await fetch(`${API_URL}/inventory/alerts`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authToken,
+        },
+      });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Failed to fetch alerts (${res.status})`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Failed to fetch alerts (${res.status})`);
+      }
+
+      const data = await res.json();
+
+      setAlerts({
+        lowStock: Array.isArray(data.lowStock) ? data.lowStock : [],
+        expiringSoon: Array.isArray(data.expiringSoon) ? data.expiringSoon : [],
+        expired: Array.isArray(data.expired) ? data.expired : [],
+      });
+
+      setLastRefresh(new Date());
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      setAlertsError(error.message || "Unable to load alerts");
+    } finally {
+      setLoadingAlerts(false);
     }
+  }, []);
 
-    const data = await res.json();
+  // --- Refresh both alerts and analytics ---
+  const refreshData = useCallback(async () => {
+    await Promise.all([fetchAlerts(), fetchAnalytics()]);
+  }, [fetchAlerts, fetchAnalytics]);
 
-    setAlerts({
-      lowStock: Array.isArray(data.lowStock) ? data.lowStock : [],
-      expiringSoon: Array.isArray(data.expiringSoon) ? data.expiringSoon : [],
-      expired: Array.isArray(data.expired) ? data.expired : [],
-    });
-
-    setLastRefresh(new Date());
-  } catch (error) {
-    console.error("Error fetching alerts:", error);
-    setAlertsError(error.message || "Unable to load alerts");
-  } finally {
-    setLoadingAlerts(false);
-  }
-}, []);
-
-
-
-
-  // --- Fetch alerts on mount ---
+  // --- Fetch data on mount ---
   useEffect(() => {
-    fetchAlerts();
-  }, [fetchAlerts]);
+    refreshData();
+  }, [refreshData]);
 
-  // --- Auto-refresh alerts every 5 minutes ---
+  // --- Auto-refresh data every 5 minutes ---
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchAlerts();
+      refreshData();
     }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(interval);
-  }, [fetchAlerts]);
+  }, [refreshData]);
+
+  // --- Get today's revenue and orders from analytics ---
+  const todaySales = analyticsData?.dailyRevenue?.[6] || { revenue: 0, orders: 0, date: new Date() };
+  
+  // --- Get weekly sales data from analytics ---
+  const weeklySalesData = analyticsData?.dailyRevenue || [];
 
   const lowStockCount = alerts.lowStock.length;
   const expiringCount = alerts.expiringSoon.length;
@@ -112,12 +138,12 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
             Last updated: {lastRefresh.toLocaleTimeString()}
           </div>
           <button
-            onClick={fetchAlerts}
-            disabled={loadingAlerts}
+            onClick={refreshData}
+            disabled={loadingAlerts || loadingAnalytics}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50"
-            title="Refresh alerts"
+            title="Refresh data"
           >
-            <RefreshCw className={`h-4 w-4 ${loadingAlerts ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${(loadingAlerts || loadingAnalytics) ? 'animate-spin' : ''}`} />
             <span className="text-sm">Refresh</span>
           </button>
         </div>
@@ -128,10 +154,10 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
         <StatsCard 
           icon={DollarSign} 
           title="Today's Revenue" 
-          value={`₹${(todaySales.revenue || 0).toLocaleString()}`}
-          subtitle={`${todaySales.orders || 0} orders`}
+          value={loadingAnalytics ? '...' : `₹${(todaySales.revenue || 0).toLocaleString()}`}
+          subtitle={loadingAnalytics ? 'Loading...' : `${todaySales.orders || 0} orders`}
           color="#10B981"
-          trend="+12.5%"
+          trend={analyticsData?.stats?.weeklyRevenue > 0 ? "+12.5%" : undefined}
         />
         <StatsCard 
           icon={Package} 
@@ -156,7 +182,6 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
         />
       </div>
       
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Sales Trend */}
         <div className="bg-white rounded-xl shadow-md p-6">
@@ -165,31 +190,44 @@ const Dashboard = ({ medicines = [], prescriptions = [], sales = [] }) => {
             Weekly Sales Trend
           </h3>
           <div className="space-y-3">
-            {Array.isArray(sales) && sales.length > 0 ? (
-              sales.map((day, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    {new Date(day.date).toLocaleDateString('en-US', { 
-                      weekday: 'short', 
-                      month: 'short', 
-                      day: 'numeric' 
-                    })}
-                  </span>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-48 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, ((day.revenue || 0) / 20000) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700 w-20 text-right">
-                      ₹{(day.revenue || 0).toLocaleString()}
+            {loadingAnalytics ? (
+              <div className="text-sm text-gray-500 text-center py-8">
+                <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
+                Loading sales data...
+              </div>
+            ) : weeklySalesData.length > 0 ? (
+              weeklySalesData.map((day, idx) => {
+                const maxRevenue = Math.max(...weeklySalesData.map(d => d.revenue), 1);
+                const widthPercent = Math.min(100, ((day.revenue || 0) / maxRevenue) * 100);
+                
+                return (
+                  <div key={idx} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 w-24">
+                      {new Date(day.date).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
                     </span>
+                    <div className="flex items-center space-x-3 flex-1">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${widthPercent}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700 w-24 text-right">
+                        ₹{(day.revenue || 0).toLocaleString()}
+                      </span>
+                      <span className="text-xs text-gray-500 w-16 text-right">
+                        {day.orders} {day.orders === 1 ? 'order' : 'orders'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="text-gray-500">No sales data available</div>
+              <div className="text-gray-500 text-center py-8">No sales data available</div>
             )}
           </div>
         </div>

@@ -464,14 +464,14 @@ const AuthPage = ({ onLogin, onLogout }) => {
                     onClick={() => setShowAuthModal(true)}
                     className="bg-blue-600 text-white px-10 py-4 rounded-xl font-bold text-lg flex items-center space-x-3 hover:bg-blue-700 hover:shadow-2xl transition transform hover:scale-105"
                   >
-                    <span>Get Started Free</span>
+                    <span>Get Started </span>
                     <ArrowRight className="h-6 w-6" />
                   </button>
                 )}
-                <button className="border-2 border-blue-600 text-blue-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-blue-50 hover:shadow-xl transition transform hover:scale-105 flex items-center space-x-2">
+                {/* <button className="border-2 border-blue-600 text-blue-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-blue-50 hover:shadow-xl transition transform hover:scale-105 flex items-center space-x-2">
                   <Globe className="h-5 w-5" />
                   <span>Watch Demo</span>
-                </button>
+                </button> */}
               </div>
               <div className="flex items-center space-x-8 pt-6">
                 <div className="flex items-center space-x-3 bg-white rounded-xl px-4 py-3 shadow-lg border border-blue-100">
@@ -590,7 +590,7 @@ const AuthPage = ({ onLogin, onLogout }) => {
           </div>
 
           <div className="border-t border-gray-800 pt-8 text-center">
-            <p className="text-gray-400">© 2024 PharmaCare. All rights reserved.</p>
+            <p className="text-gray-400">© 2026 PharmaCare. All rights reserved.</p>
           </div>
         </div>
       </footer>

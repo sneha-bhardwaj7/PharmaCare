@@ -140,15 +140,20 @@ export default function AuthInformation() {
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
             <div className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="relative h-48 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-gray-600 rounded-2xl p-4 w-fit mb-6  group-hover:scale-110 transition-transform">
+                <PackageSearch className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-gray-200 to-gray-100">
                 <img
                   src={serviceImg1}
                   alt="Find Medicines"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <div className="bg-gray-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <PackageSearch className="h-10 w-10 text-white" />
+              
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Find Medicines</h3>
               <p className="text-gray-600 leading-relaxed mb-4">
@@ -167,15 +172,20 @@ export default function AuthInformation() {
             </div>
 
             <div className="bg-gradient-to-br from-yellow-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="relative h-48 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-yellow-200 to-yellow-100">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-yellow-600 rounded-2xl p-4 w-fit mb-6  group-hover:scale-110 transition-transform">
+                <FileText className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-yellow-200 to-yellow-100">
                 <img
-                  src="/digital-prescription-medical-document.jpg"
+                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
                   alt="Digital Prescriptions"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <div className="bg-yellow-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <FileText className="h-10 w-10 text-white" />
+              
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Digital Prescriptions</h3>
               <p className="text-gray-600 leading-relaxed mb-4">
@@ -194,15 +204,19 @@ export default function AuthInformation() {
             </div>
 
             <div className="bg-gradient-to-br from-pink-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="relative h-48 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-pink-200 to-pink-100">
+              <div className="flex items-start gap-4"> 
+                <div className="bg-pink-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <Truck className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-pink-200 to-pink-100">
                 <img
-                  src="/fast-delivery-truck-package.jpg"
+                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
                   alt="Fast Delivery"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <div className="bg-pink-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <Truck className="h-10 w-10 text-white" />
+              
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Fast Delivery</h3>
               <p className="text-gray-600 leading-relaxed mb-4">
@@ -223,15 +237,21 @@ export default function AuthInformation() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-gradient-to-br from-green-50 to-white p-8 rounded-2xl shadow-lg border-2 border-green-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="relative h-48 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-green-200 to-green-100">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-green-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <HeartPulse className="h-20 w-10 text-white" />
+              </div>
+
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-green-200 to-green-100">
                 <img
-                  src="/health-monitoring-heart-fitness-tracker.jpg"
+                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
                   alt="Health Monitoring"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <div className="bg-green-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <HeartPulse className="h-10 w-10 text-white" />
+              
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Health Monitoring</h3>
               <p className="text-gray-600 leading-relaxed">
@@ -240,15 +260,21 @@ export default function AuthInformation() {
             </div>
 
             <div className="bg-gradient-to-br from-purple-50 to-white p-8 rounded-2xl shadow-lg border-2 border-purple-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="relative h-48 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-purple-200 to-purple-100">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-purple-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <Phone className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-purple-200 to-purple-100">
                 <img
-                  src="/customer-support-consultation-phone-call.jpg"
+                  src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
                   alt="24/7 Consultation"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <div className="bg-purple-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <Phone className="h-10 w-10 text-white" />
+              
+
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">24/7 Consultation</h3>
               <p className="text-gray-600 leading-relaxed">
@@ -257,15 +283,20 @@ export default function AuthInformation() {
             </div>
 
             <div className="bg-gradient-to-br from-orange-50 to-white p-8 rounded-2xl shadow-lg border-2 border-orange-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 group overflow-hidden">
-              <div className="relative h-48 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-orange-200 to-orange-100">
+              <div className="flex items-start gap-4">
+
+                <div className="bg-orange-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <Award className="h-20 w-10 text-white" />
+              </div>
+
+                <div className="relative h-30 mb-6 rounded-xl overflow-hidden bg-gradient-to-br from-orange-200 to-orange-100">
                 <img
-                  src="/loyalty-rewards-points-badge-gift.jpg"
+                  src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
                   alt="Loyalty Rewards"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-150 h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
               </div>
-              <div className="bg-orange-600 rounded-2xl p-4 w-fit mb-6 group-hover:scale-110 transition-transform">
-                <Award className="h-10 w-10 text-white" />
+              
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Loyalty Rewards</h3>
               <p className="text-gray-600 leading-relaxed">
@@ -373,7 +404,7 @@ export default function AuthInformation() {
       </section>
 
       {/* Testimonials Carousel Section */}
-      <section id="testimonials" className="py-24 px-4 bg-white relative overflow-hidden">
+      <section id="testimonials" className="py-8 px-4 bg-white relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-20 -left-20 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
           <div
@@ -383,12 +414,12 @@ export default function AuthInformation() {
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold mb-4">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold mb-2 mt-4">
               <Star className="h-4 w-4" />
               <span>Trusted by Thousands</span>
             </div>
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">What Our Customers Say</h2>
+            <h2 className="text-6xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">What Our Customers Say</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Real experiences from real people using PharmaCare
             </p>
@@ -464,15 +495,15 @@ export default function AuthInformation() {
       </section>
 
       {/* Trust & Safety Section */}
-      <section className="py-24 px-4 bg-gradient-to-br from-green-50 to-white">
+      <section className="py-12 px-4 bg-gradient-to-br from-blue-50 to-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center space-x-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold mb-4">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center space-x-2 bg-blue-200 text-blue-700 px-4 py-2 rounded-full text-sm font-bold mb-4">
               <Shield className="h-4 w-4" />
               <span>Your Safety is Our Priority</span>
             </div>
             <h2 className="text-5xl font-bold text-gray-900 mb-4">Why Trust PharmaCare?</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               We're committed to providing safe, genuine, and reliable healthcare solutions
             </p>
           </div>
@@ -511,7 +542,7 @@ export default function AuthInformation() {
                   className="bg-white p-6 rounded-2xl shadow-lg text-center border-2 border-green-100 hover:shadow-xl hover:scale-105 transition-all duration-300 transform animate-fade-in"
                   style={{ animationDelay: item.delay }}
                 >
-                  <div className="bg-green-600 rounded-full p-4 w-fit mx-auto mb-4">
+                  <div className="bg-blue-600 rounded-full p-4 w-fit mx-auto mb-4">
                     <IconComp className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>

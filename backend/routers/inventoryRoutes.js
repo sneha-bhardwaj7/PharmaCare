@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/authMiddleware");
-
+const { searchMedicine } = require("../controllers/medicineController");
 const {
   getLowStockMedicines,
   getExpiringSoonMedicines,
@@ -12,18 +12,22 @@ const {
   deleteMedicine,
 } = require("../controllers/inventoryController");
 
-// Dashboard alert aggregation
-router.get("/alerts", protect, getAlerts);
+// ⚠️ CRITICAL: Specific routes MUST come BEFORE parameterized routes!
 
-// New Required Endpoints
+// Dashboard alerts
+router.get("/alerts", protect, getAlerts);
 router.get("/low-stock", protect, getLowStockMedicines);
 router.get("/expiring-soon", protect, getExpiringSoonMedicines);
 
-// Inventory CRUD
+// 🔥 SEARCH MUST BE BEFORE /:id
+router.get("/search", protect, searchMedicine);
+
+// Base inventory routes
 router.route("/")
   .get(protect, getMedicines)
   .post(protect, addMedicine);
 
+// Parameterized routes LAST
 router.route("/:id")
   .put(protect, updateMedicine)
   .delete(protect, deleteMedicine);

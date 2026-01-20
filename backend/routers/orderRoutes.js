@@ -1,15 +1,30 @@
+// backend/routes/orderRoutes.js
+
 const express = require("express");
 const router = express.Router();
-const { protect, admin } = require("../middleware/authMiddleware");
-const { placeOrder, getMyOrders, getAllOrders } = require("../controllers/orderController");
+const { protect } = require("../middleware/authMiddleware");
+const { onlyPharmacist } = require("../middleware/roleMiddleware");
+const { 
+  placeOrder, 
+  getMyOrders, 
+  getPharmacistOrders,
+  getAllOrders,
+  updateOrderStatus 
+} = require("../controllers/orderController");
 
-// Place order
+// Place order (customers)
 router.post("/", protect, placeOrder);
 
-// Fetch logged-in user's orders
+// Get my orders (customer view)
 router.get("/my-orders", protect, getMyOrders);
 
-// Fetch all orders (admin/staff only)
+// Get pharmacist orders (pharmacist view)
+router.get("/pharmacist-orders", protect, onlyPharmacist, getPharmacistOrders);
+
+// Update order status (pharmacist only)
+router.put("/:id/status", protect, onlyPharmacist, updateOrderStatus);
+
+// Get all orders (admin only)
 router.get("/", protect, getAllOrders);
 
 module.exports = router;

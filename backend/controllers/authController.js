@@ -130,6 +130,8 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Please provide name, email, password, and user type");
   }
 
+  
+
   if (password.length < 6) {
     res.status(400);
     throw new Error("Password must be at least 6 characters long");
@@ -155,6 +157,11 @@ const registerUser = asyncHandler(async (req, res) => {
     pincode,
   };
 
+  const user = await User.create({
+    ...userData,
+    activatedAt: new Date() // 🔥 Set activation time
+  });
+
   // Add pharmacy name for pharmacists
   if (userType === "pharmacist") {
     if (!pharmacyName) {
@@ -165,7 +172,7 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // Create user
-  const user = await User.create(userData);
+  // const user = await User.create(userData);
 
   // Return user data with token
    res.status(201).json({

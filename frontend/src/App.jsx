@@ -12,14 +12,17 @@ import PrescriptionsView from './pages/PrescriptionsView.jsx';
 import AnalyticsView from './pages/AnalyticsView.jsx';
 import FindMedicineView from './pages/FindMedicineView.jsx';
 import UploadPrescriptionView from './pages/UploadPrescriptionView.jsx';
+import MyOrdersView from './pages/MyOrdersView.jsx'; // ✅ ADD THIS IMPORT
 import ProfileView from './components/ProfileView.jsx';
 import PharmacyOrderDashboard from './pages/PharmacyOrderDashboard .jsx';
-
 import Profile from './components/Profile.jsx';
 import Settings from './components/Settings.jsx';
 import Messages from './components/Messages.jsx';
 // --- Auth and Utility Imports ---
 import AuthPage from './pages/AuthPage.jsx';
+import NotificationsView from './pages/NotificationsView.jsx';
+import PharmacyAIChatbot from './components/PharmacyAIChatbot.jsx';
+
 import {
   mockMedicines,
   mockPrescriptions,
@@ -49,6 +52,10 @@ const renderView = (activeView, userRole) => {
   if (activeView === 'messages') {
     return <Messages />;
   }
+    if (activeView === 'notifications') {
+    return <NotificationsView />;
+  }
+
 
   // Role-specific views
   if (userRole === 'admin' || userRole === 'pharmacist') {
@@ -62,9 +69,7 @@ const renderView = (activeView, userRole) => {
       case 'analytics':
         return <AnalyticsView sales={mockSales} medicines={mockMedicines} />;
       case 'orders-dashboard':
-        return <PharmacyOrderDashboard  pharmacies={mockNearbyPharmacies} />;
-      // case 'upload-rx':
-      //   return <UploadPrescriptionView />;
+        return <PharmacyOrderDashboard pharmacies={mockNearbyPharmacies} />;
       default:
         return <Dashboard medicines={mockMedicines} prescriptions={mockPrescriptions} sales={mockSales} />;
     }
@@ -75,13 +80,7 @@ const renderView = (activeView, userRole) => {
       case 'upload-rx':
         return <UploadPrescriptionView />;
       case 'my-orders':
-        return (
-          <div className="bg-white rounded-xl shadow-md p-8 text-center">
-            <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">No Orders Yet</h3>
-            <p className="text-gray-600">Upload a prescription to place your first order</p>
-          </div>
-        );
+        return <MyOrdersView />; // ✅ CHANGED: Use actual MyOrdersView component
       default:
         return <FindMedicineView pharmacies={mockNearbyPharmacies} />;
     }
@@ -93,8 +92,6 @@ const renderView = (activeView, userRole) => {
 const AuthenticatedApp = ({ userRole, handleLogout, activeView, setActiveView, theme, setTheme }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-
-  
 
   // Update activeView based on URL path
   useEffect(() => {
@@ -123,24 +120,31 @@ const AuthenticatedApp = ({ userRole, handleLogout, activeView, setActiveView, t
         {currentView}
       </main>
 
-      {/* Role Switcher (For Demo) */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={() => {
-            const newRole = userRole === 'admin' ? 'customer' : (userRole === 'customer' ? 'admin' : 'admin');
-            const authData = { userType: newRole, token: 'mock_token', name: 'Test User' };
-            localStorage.setItem('user_auth', JSON.stringify(authData));
-            localStorage.setItem('userInfo', JSON.stringify({ name: 'Test User', userType: newRole, email: 'test@user.com' }));
-            handleLogout();
-            window.location.reload();
-          }}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center space-x-2 transition-all transform hover:scale-105"
-        >
-          <Users className="h-5 w-5" />
-          <span className="font-semibold">
-            Switch to {userRole === 'admin' ? 'Customer' : (userRole === 'customer' ? 'Pharmacist' : 'Admin')}
-          </span>
-        </button>
+      <div className=''>  
+        {/* AI Chatbot */}
+        <div className="fixed bottom-20 right-6 z-[9999]">
+          <PharmacyAIChatbot />
+        </div>
+
+        {/* Role Switcher (For Demo) */}
+        <div className="fixed bottom-6 right-6 z-[99]">
+          <button
+            onClick={() => {
+              const newRole = userRole === 'admin' ? 'customer' : (userRole === 'customer' ? 'pharmacist' : 'admin');
+              const authData = { userType: newRole, token: 'mock_token', name: 'Test User' };
+              localStorage.setItem('user_auth', JSON.stringify(authData));
+              localStorage.setItem('userInfo', JSON.stringify({ name: 'Test User', userType: newRole, email: 'test@user.com' }));
+              handleLogout();
+              window.location.reload();
+            }}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-3 rounded-full shadow-lg flex items-center space-x-2 transition-all transform hover:scale-105"
+          >
+            <Users className="h-5 w-5" />
+            <span className="font-semibold">
+              Switch to {userRole === 'admin' ? 'Customer' : (userRole === 'customer' ? 'Pharmacist' : 'Admin')}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 const asyncHandler = require("express-async-handler");
 const Medicine = require("../models/Medicine");
-
+const User = require("../models/User");
 
 /* ---------------------------------------------------------
    @desc    Get Low Stock & Expiry Alerts
@@ -30,6 +30,8 @@ const getLowStockMedicines = asyncHandler(async (req, res) => {
 
   res.json(lowStock);
 });
+
+
 
 // --- Get Expiring Soon Medicines ---
 const getExpiringSoonMedicines = asyncHandler(async (req, res) => {
@@ -119,6 +121,81 @@ const addMedicine = asyncHandler(async (req, res) => {
     res.status(201).json(medicine);
 });
 
+
+// Search for medicine and find pharmacists who have it in the same pincode
+exports.searchMedicine = asyncHandler(async (req, res) => {
+  const { name } = req.query;
+  const userPincode = req.user.pincode;
+
+  // if (!userPincode) {
+  //   return res.status(400).json({
+  //     message: "User pincode not found. Please update your profile with pincode.",
+  //   });
+  // }
+
+  // if (!name) {
+  //   return res.status(400).json({
+  //     message: "Please provide a medicine name to search.",
+  //   });
+  // }
+
+  if (!name || !userPincode) {
+    return res.status(400).json({ message: "Medicine name & pincode required" });
+  }
+
+  try {
+    // Find all medicines matching the search term (case-insensitive, partial match)
+    const medicines = await Medicine.find({
+    name: { $regex: name, $options: "i" },
+    stock: { $gt: 0 },
+    expiry: { $gte: new Date() }
+  }).populate({
+    path: "user",
+    match: {
+      pincode: userPincode,
+      userType: "pharmacist",
+      isAvailable: true
+    },
+    select: "name phone pharmacyName address rating licenseNumber"
+  });
+
+    // Filter out medicines where user/pharmacist is null (different pincode or not a pharmacist)
+    const availableMedicines = medicines.filter(med => med.user !== null);
+
+    // Format the response with complete pharmacist and medicine details
+    const results = medicines
+    .filter(m => m.user)
+    .map(m => ({
+      medicineId: m._id,
+      medicineName: m.name,
+      category: m.category,
+      price: m.price,
+      stock: m.stock,
+      expiry: m.expiry,
+      pharmacistId: m.user._id,
+      pharmacyName: m.user.pharmacyName,
+      pharmacistPhone: m.user.phone,
+      pharmacyAddress: m.user.address,
+      rating: m.user.rating || 4.5,
+      licenseNumber: m.user.licenseNumber
+    }));
+
+    res.json({
+      success: true,
+      count: pharmacists.length,
+      searchTerm: name,
+      userPincode: userPincode,
+      pharmacists
+    });
+  } catch (error) {
+    console.error("Medicine search error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to search medicine",
+      error: error.message
+    });
+  }
+});
 /* ---------------------------------------------------------
    @desc    Update an existing medicine item
    @route   PUT /api/inventory/:id

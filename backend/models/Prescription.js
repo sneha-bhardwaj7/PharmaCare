@@ -1,4 +1,5 @@
 // models/Prescription.js
+
 const mongoose = require("mongoose");
 
 const prescriptionSchema = new mongoose.Schema(
@@ -24,12 +25,30 @@ const prescriptionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // Order-related fields
+    assignedPharmacist: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    targetArea: {
+      type: String,
+      required: true,
+    },
     items: [
       {
-        name: { type: String, required: true },
-        quantity: { type: Number, required: true },
-        price: { type: Number, required: true },
+        name: { 
+          type: String, 
+          required: true 
+        },
+        quantity: { 
+          type: Number, 
+          required: true 
+        },
+        price: { 
+          type: Number, 
+          required: false,  // ✅ CHANGED: Not required on upload
+          default: 0        // ✅ ADDED: Default to 0
+        },
         category: String
       }
     ],
@@ -56,17 +75,15 @@ const prescriptionSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
-    // Pharmacist fields
     pharmacistNote: {
       type: String,
       default: "",
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "quoted", "approved", "rejected"],  // ✅ Added "quoted"
       default: "pending",
     },
-    // Link to created order
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
@@ -75,5 +92,9 @@ const prescriptionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+
+prescriptionSchema.index({ targetArea: 1, createdAt: -1 });
+prescriptionSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Prescription", prescriptionSchema);

@@ -49,14 +49,32 @@ const userSchema = new mongoose.Schema(
       required: true
     },
 
+
+    activatedAt: {
+      type: Date,
+      default: null
+    },
+
     pincode: {
-      type: Number,
+      type: String,
       required: true
     },
 
     licenseNumber: {
       type: String,
       default: ""
+    },
+
+    // Add these fields to your existing userSchema
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
+    rating: {
+      type: Number,
+      default: 4.5,
+      min: 0,
+      max: 5,
     },
 
     otp: String,

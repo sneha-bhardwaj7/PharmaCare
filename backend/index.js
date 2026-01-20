@@ -6,7 +6,10 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routers/authRoutes');
 const inventoryRoutes = require('./routers/inventoryRoutes');
 const { errorHandler } = require('./middleware/errorMiddleware');
-
+const prescriptionRoutes = require("./routers/prescriptionRoutes");
+const orderRoutes = require("./routers/orderRoutes");
+const notificationRoutes = require("./routers/notificationRoutes");
+const analyticsRoutes = require("./routers/analyticsRoutes");
 
 // Load env vars
 dotenv.config();
@@ -33,6 +36,9 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Health check route
 app.get('/', (req, res) => {
@@ -40,16 +46,13 @@ app.get('/', (req, res) => {
 });
 
 // Prescription Routes
-app.use("/api/prescriptions", require("./routers/prescriptionRoutes"));
 app.use("/uploads", express.static("uploads"));
 
 
-const prescriptionRoutes = require("./routers/prescriptionRoutes");
 app.use("/api/prescriptions", prescriptionRoutes);
 
-// order Routes
-app.use("/api/orders", require("./routers/orderRoutes"));
-
+// Add this with your other route registrations
+app.use("/api/analytics", analyticsRoutes);
 
 
 // Error Handler (should be last)
