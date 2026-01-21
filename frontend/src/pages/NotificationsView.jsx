@@ -10,7 +10,23 @@ const NotificationsView = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
+  // FIX: Properly construct API URL with /api
+  const API_URL = React.useMemo(() => {
+    let baseUrl = import.meta.env.VITE_BACKEND_BASEURL;
+    
+    if (!baseUrl) {
+      baseUrl = "http://localhost:5000";
+    }
+    
+    // Ensure /api is in the path if not already present
+    if (!baseUrl.includes('/api')) {
+      baseUrl = `${baseUrl}/api`;
+    }
+    
+    console.log('🔔 Notifications API URL:', baseUrl);
+    return baseUrl;
+  }, []);
+
   const authData = JSON.parse(localStorage.getItem('user_auth'));
   const token = authData?.token;
 
@@ -23,16 +39,25 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
 
   const fetchNotifications = async () => {
     try {
+      console.log('📡 Fetching notifications from:', `${API_URL}/notifications`);
+      
       const res = await fetch(`${API_URL}/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
+      console.log('✅ Notifications loaded:', data);
+      
       if (data.success) {
         setNotifications(data.notifications);
         setUnreadCount(data.unreadCount);
       }
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      console.error('❌ Failed to fetch notifications:', err);
     } finally {
       setLoading(false);
     }
@@ -126,7 +151,7 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
   }
 
   return (
-    <div className="space-y-6 ">
+    <div className="space-y-6">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
