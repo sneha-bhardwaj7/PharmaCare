@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Search, Filter, Plus, Edit, Trash2, X, Package, AlertTriangle, TrendingDown, RefreshCw } from 'lucide-react';
 
-const API_BASE_URL = `${
-  import.meta.env.VITE_BACKEND_URL ?? "http://localhost:5000"
-}/api/inventory`;
-
-// Helper functions
-const getAuthToken = () => {
-  const authData = JSON.parse(localStorage.getItem('user_auth'));
-  return authData ? `Bearer ${authData.token}` : '';
+// Cache to persist data across navigations
+const inventoryCache = {
+  data: null,
+  timestamp: null,
+  isValid() {
+    return this.data && this.timestamp && (Date.now() - this.timestamp < 5 * 60 * 1000);
+  }
 };
 
+// Helper functions
 const getStockStatus = (stock, reorderLevel) => {
   if (stock === 0) {
     return { label: 'Out of Stock', color: 'bg-red-500' };
@@ -29,7 +29,7 @@ const getDaysUntilExpiry = (expiryDate) => {
 };
 
 // Medicine Modal Component
-const MedicineModal = ({ isOpen, onClose, onSubmit, initialData }) => {
+const MedicineModal = ({ isOpen, onClose, onSubmit, initialData, API_BASE_URL, token }) => {
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -243,26 +243,43 @@ const MedicineModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 
 // Main Inventory View Component
 const InventoryView = () => {
-  const [medicines, setMedicines] = useState([]);
+  const [medicines, setMedicines] = useState(inventoryCache.data || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!inventoryCache.isValid());
   const [error, setError] = useState(null);
   const hasFetched = useRef(false);
 
-  // Fetch medicines from backend - Only once
-  const fetchMedicines = useCallback(async () => {
-    if (hasFetched.current && medicines.length > 0) {
-      return; // Don't refetch if we already have data
+  // Memoize API URL and token - CRITICAL FIX
+  const { API_BASE_URL, token } = useMemo(() => {
+    // Use VITE_BACKEND_BASEURL if available, otherwise VITE_BACKEND_URL + /api
+    const baseUrl = import.meta.env.VITE_BACKEND_BASEURL || "http://localhost:5000/api";
+    
+    const apiUrl = `${baseUrl}/inventory`;
+    const authData = JSON.parse(localStorage.getItem('user_auth') || '{}');
+    const authToken = authData?.token ? `Bearer ${authData.token}` : '';
+    
+    console.log('🔧 API Config:', { apiUrl, hasToken: !!authToken });
+    
+    return { API_BASE_URL: apiUrl, token: authToken };
+  }, []);
+
+  // Fetch medicines from backend
+  const fetchMedicines = useCallback(async (forceRefresh = false) => {
+    // Use cache if valid and not forcing refresh
+    if (!forceRefresh && inventoryCache.isValid()) {
+      setMedicines(inventoryCache.data);
+      setLoading(false);
+      return;
     }
 
     setLoading(true);
     setError(null);
     
     try {
-      const token = getAuthToken();
+      console.log('📡 Fetching from:', API_BASE_URL);
       
       const response = await fetch(API_BASE_URL, {
         method: 'GET',
@@ -278,27 +295,37 @@ const InventoryView = () => {
       }
 
       const data = await response.json();
+      console.log('✅ Medicines loaded:', data.length);
+      
+      // Update cache
+      inventoryCache.data = data;
+      inventoryCache.timestamp = Date.now();
+      
       setMedicines(data);
       hasFetched.current = true;
     } catch (err) {
-      console.error('Error fetching medicines:', err);
+      console.error('❌ Error fetching medicines:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [medicines.length]);
+  }, [API_BASE_URL, token]);
 
   // Initial fetch - only once
   useEffect(() => {
-    if (!hasFetched.current) {
-      fetchMedicines();
+    if (!inventoryCache.isValid() && !hasFetched.current) {
+      hasFetched.current = true;
+      fetchMedicines(false);
+    } else if (inventoryCache.isValid() && medicines.length === 0) {
+      setMedicines(inventoryCache.data);
+      setLoading(false);
     }
   }, []);
 
   // Manual refresh
   const handleRefresh = async () => {
     hasFetched.current = false;
-    await fetchMedicines();
+    await fetchMedicines(true);
   };
 
   // Add or Edit Medicine
@@ -312,7 +339,7 @@ const InventoryView = () => {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': getAuthToken(),
+        'Authorization': token,
       },
       body: JSON.stringify(formData),
     });
@@ -325,7 +352,7 @@ const InventoryView = () => {
 
     // Refresh the list
     hasFetched.current = false;
-    await fetchMedicines();
+    await fetchMedicines(true);
     setEditingMedicine(null);
   };
 
@@ -339,7 +366,7 @@ const InventoryView = () => {
       const response = await fetch(`${API_BASE_URL}/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': getAuthToken(),
+          'Authorization': token,
         },
       });
 
@@ -349,7 +376,7 @@ const InventoryView = () => {
       }
 
       hasFetched.current = false;
-      await fetchMedicines();
+      await fetchMedicines(true);
     } catch (err) {
       alert(err.message);
     }
@@ -385,14 +412,14 @@ const InventoryView = () => {
     }).length
   };
 
-  // if (loading && medicines.length === 0) {
-  //   return (
-  //     <div className="flex flex-col items-center justify-center py-20">
-  //       <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-  //       <p className="text-gray-600 text-lg font-semibold">Loading inventory...</p>
-  //     </div>
-  //   );
-  // }
+  if (loading && medicines.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+        <p className="text-gray-600 text-lg font-semibold">Loading inventory...</p>
+      </div>
+    );
+  }
 
   if (error && medicines.length === 0) {
     return (
@@ -423,9 +450,10 @@ const InventoryView = () => {
           </div>
           <button
             onClick={handleRefresh}
-            className="bg-white/20 hover:bg-white/30 p-3 rounded-xl transition flex items-center gap-2"
+            disabled={loading}
+            className="bg-white/20 hover:bg-white/30 p-3 rounded-xl transition flex items-center gap-2 disabled:opacity-50"
           >
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden md:inline">Refresh</span>
           </button>
         </div>
@@ -607,6 +635,8 @@ const InventoryView = () => {
         }}
         onSubmit={handleAddOrEditMedicine}
         initialData={editingMedicine}
+        API_BASE_URL={API_BASE_URL}
+        token={token}
       />
     </div>
   );
