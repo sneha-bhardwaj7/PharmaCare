@@ -175,7 +175,7 @@ const handleSave = async () => {
       return;
     }
 
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/update-profile`, {
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/update-profile`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
