@@ -253,18 +253,29 @@ const InventoryView = () => {
   const hasFetched = useRef(false);
 
   // Memoize API URL and token - CRITICAL FIX
-  const { API_BASE_URL, token } = useMemo(() => {
-    // Use VITE_BACKEND_BASEURL if available, otherwise VITE_BACKEND_URL + /api
-    const baseUrl = import.meta.env.VITE_BACKEND_BASEURL || "http://localhost:5000/api";
-    
-    const apiUrl = `${baseUrl}/inventory`;
-    const authData = JSON.parse(localStorage.getItem('user_auth') || '{}');
-    const authToken = authData?.token ? `Bearer ${authData.token}` : '';
-    
-    console.log('🔧 API Config:', { apiUrl, hasToken: !!authToken });
-    
-    return { API_BASE_URL: apiUrl, token: authToken };
-  }, []);
+  // Memoize API URL and token - CRITICAL FIX
+const { API_BASE_URL, token } = useMemo(() => {
+  // Get base URL from environment variable
+  let baseUrl = import.meta.env.VITE_BACKEND_BASEURL;
+  
+  // Fallback to localhost if not set
+  if (!baseUrl) {
+    baseUrl = "http://localhost:5000";
+  }
+  
+  // Ensure /api is in the path if not already present
+  if (!baseUrl.includes('/api')) {
+    baseUrl = `${baseUrl}/api`;
+  }
+  
+  const apiUrl = `${baseUrl}/inventory`;
+  const authData = JSON.parse(localStorage.getItem('user_auth') || '{}');
+  const authToken = authData?.token ? `Bearer ${authData.token}` : '';
+  
+  console.log('🔧 API Config:', { baseUrl, apiUrl, hasToken: !!authToken });
+  
+  return { API_BASE_URL: apiUrl, token: authToken };
+}, []);
 
   // Fetch medicines from backend
   const fetchMedicines = useCallback(async (forceRefresh = false) => {
@@ -591,8 +602,8 @@ const InventoryView = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${stockStatus.color} text-white`}>
+                    <td className="px-4 py-4">
+                      <span className={`px-8 py-1 rounded-full text-xs font-bold ${stockStatus.color} text-white`}>
                         {stockStatus.label}
                       </span>
                     </td>
