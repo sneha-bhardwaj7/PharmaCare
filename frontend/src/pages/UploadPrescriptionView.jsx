@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Upload,
@@ -12,6 +12,16 @@ import {
   ArrowRight
 } from "lucide-react";
 
+// Create a cache outside the component to persist across unmounts
+const profileCache = {
+  data: null,
+  timestamp: null,
+  isValid() {
+    // Cache is valid for 5 minutes
+    return this.data && this.timestamp && (Date.now() - this.timestamp < 5 * 60 * 1000);
+  }
+};
+
 const UploadPrescriptionView = () => {
   const navigate = useNavigate();
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -19,18 +29,18 @@ const UploadPrescriptionView = () => {
   const [dragActive, setDragActive] = useState(false);
   const [paymentMode, setPaymentMode] = useState("Cash");
   const [loading, setLoading] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState(profileCache.data);
+  const [profileLoading, setProfileLoading] = useState(!profileCache.isValid());
   const [missingFields, setMissingFields] = useState([]);
+  const hasFetched = useRef(false);
 
-const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
-
-  const authData = JSON.parse(localStorage.getItem("user_auth") || "{}");
-  const token = authData?.token;
-
-  // Load user profile on mount
-  useEffect(() => {
-    fetchUserProfile();
+  // Memoize API_URL and token
+  const { API_URL, BACKEND_URL, token } = useMemo(() => {
+    const apiUrl = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:5000"}/api`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+    const authData = JSON.parse(localStorage.getItem("user_auth") || '{}');
+    const authToken = authData?.token;
+    return { API_URL: apiUrl, BACKEND_URL: backendUrl, token: authToken };
   }, []);
 
   const fetchUserProfile = async () => {
@@ -40,7 +50,7 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
     }
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
+      const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -57,6 +67,10 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
         if (!data.pincode) missing.push("Pincode");
         
         setMissingFields(missing);
+        
+        // Update cache
+        profileCache.data = data;
+        profileCache.timestamp = Date.now();
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -64,6 +78,26 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
       setProfileLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Only fetch if we don't have valid cached data and haven't fetched yet
+    if (!profileCache.isValid() && !hasFetched.current) {
+      hasFetched.current = true;
+      fetchUserProfile();
+    } else if (profileCache.isValid() && !userProfile) {
+      // Use cached data immediately
+      setUserProfile(profileCache.data);
+      
+      // Check for missing required fields from cache
+      const missing = [];
+      if (!profileCache.data.phone) missing.push("Phone Number");
+      if (!profileCache.data.address) missing.push("Address");
+      if (!profileCache.data.pincode) missing.push("Pincode");
+      setMissingFields(missing);
+      
+      setProfileLoading(false);
+    }
+  }, []);
 
   /* -------------------- Drag & Drop -------------------- */
   const handleDrag = (e) => {
@@ -158,6 +192,8 @@ const API_URL = `${import.meta.env.VITE_BACKEND_BASEURL ?? "http://localhost:500
       </div>
     );
   }
+
+  
 
   return (
     <div className="space-y-6">

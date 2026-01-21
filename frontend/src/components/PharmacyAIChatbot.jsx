@@ -906,7 +906,7 @@ const PharmacyAIChatbot = () => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: '👋 Hello! I\'m your AI Pharmacy Assistant\n\nI can help you with:\n\n Find Medicines - Check availability and prices\n Medicine Info - Uses, dosage, alternatives\n Price Checks - Compare prices and get quotes\n Stock Status - Real-time inventory updates\n Prescriptions - Upload and track status\n Orders - Place and track orders\n App Guide - How to use features\n Reports - Inventory and sales analytics\n\nWhat would you like to know today?',
+      content: '👋 Hello! I\'m your AI  Assistant What would you like to know today?',
       timestamp: new Date(),
       type: 'welcome'
     }
